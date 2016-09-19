@@ -6,25 +6,16 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <title>JVM解释器初始化(一) | Znipps日记</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。
-JVM解释器初始化过程(一)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。
-前言文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。
-解释器初始化直接进入正题，如下">
+  <meta name="description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="JVM解释器初始化(一)">
 <meta property="og:url" content="http://yoursite.com/2016/09/19/jvm-interpreter-1/index.html">
 <meta property="og:site_name" content="Znipps日记">
-<meta property="og:description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。
-JVM解释器初始化过程(一)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。
-前言文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。
-解释器初始化直接进入正题，如下">
-<meta property="og:updated_time" content="2016-09-19T08:58:10.273Z">
+<meta property="og:description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。">
+<meta property="og:updated_time" content="2016-09-19T09:05:54.995Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="JVM解释器初始化(一)">
-<meta name="twitter:description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。
-JVM解释器初始化过程(一)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。
-前言文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。
-解释器初始化直接进入正题，如下">
+<meta name="twitter:description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。">
   
     <link rel="alternative" href="/atom.xml" title="Znipps日记" type="application/atom+xml">
   
@@ -164,7 +155,7 @@ JVM解释器初始化过程(一)备注：文章中所有的平台都是在Linux�
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。<br><!--全文--></p>
+        <p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。<br><a id="more"></a></p>
 <h1 id="JVM解释器初始化过程-一"><a href="#JVM解释器初始化过程-一" class="headerlink" title="JVM解释器初始化过程(一)"></a>JVM解释器初始化过程(一)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。</p>
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。</p>
 <h2 id="解释器初始化"><a href="#解释器初始化" class="headerlink" title="解释器初始化"></a>解释器初始化</h2><p>直接进入正题，如下：<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">hotspot\src\share\vm\interpreter\bytecodes.hpp:</div><div class="line"></div><div class="line"><span class="keyword">class</span> Bytecodes: AllStatic &#123;</div><div class="line"> ...</div><div class="line"></div><div class="line"> <span class="keyword">private</span>:</div><div class="line">  <span class="keyword">static</span> <span class="keyword">bool</span>        <span class="number">_</span>is_initialized;</div><div class="line">  <span class="keyword">static</span> <span class="keyword">const</span> <span class="keyword">char</span>* <span class="number">_</span>name          [number_of_codes];</div><div class="line">  <span class="keyword">static</span> BasicType   <span class="number">_</span>result_type   [number_of_codes];</div><div class="line">  <span class="keyword">static</span> s_char      <span class="number">_</span>depth         [number_of_codes];</div><div class="line">  <span class="keyword">static</span> u_char      <span class="number">_l</span>engths       [number_of_codes];</div><div class="line">  <span class="keyword">static</span> Code        <span class="number">_</span>java_code     [number_of_codes];</div><div class="line">  <span class="keyword">static</span> jchar       <span class="number">_f</span>lags         [(<span class="number">1</span>&lt;&lt;BitsPerByte)*<span class="number">2</span>]; <span class="comment">// all second page for wide formats</span></div></pre></td></tr></table></figure></p>
@@ -206,7 +197,7 @@ JVM解释器初始化过程(一)备注：文章中所有的平台都是在Linux�
     <div class="article-info article-info-index">
       
       <a href="/2016/09/19/jvm-interpreter-1/" class="archive-article-date">
-  	<time datetime="2016-09-19T07:34:24.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-19</time>
+  	<time datetime="2016-09-19T05:34:24.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-19</time>
 </a>
       
 	<div class="article-tag tagcloud">
@@ -224,11 +215,11 @@ JVM解释器初始化过程(一)备注：文章中所有的平台都是在Linux�
   
 <nav id="article-nav">
   
-    <a href="/2016/09/19/jvm-interpreter-2/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2016/09/19/jvm-interpreter-3/" id="article-nav-newer" class="article-nav-link-wrap">
       <i class="icon-circle-left"></i>
       <div class="article-nav-title">
         
-          JVM解释器初始化过程(二)
+          JVM解释器初始化过程(三)
         
       </div>
     </a>
