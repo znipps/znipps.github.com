@@ -1,161 +1,132 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant-TW">
 <head>
-  <meta charset="utf-8">
-  
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
-  <title>JVM解释器初始化过程(二) | Corner XX daily log</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。文中接着上一张进行描述。">
-<meta property="og:type" content="article">
-<meta property="og:title" content="JVM解释器初始化过程(二)">
-<meta property="og:url" content="http://yoursite.com/2016/09/19/jvm-interpreter-2/index.html">
-<meta property="og:site_name" content="Corner XX daily log">
-<meta property="og:description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。文中接着上一张进行描述。">
-<meta property="og:updated_time" content="2016-09-19T09:05:52.486Z">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="JVM解释器初始化过程(二)">
-<meta name="twitter:description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。文中接着上一张进行描述。">
-  
-    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
-  
-  
-    <link rel="icon" href="//favicon.png">
-  
-  <script src="/style.js"></script>
+
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<title> JVM解释器初始化过程(二) | Corner XX daily log </title>
+	<meta property="og:title" content=" JVM解释器初始化过程(二) | Corner XX daily log " />
+	<meta name="twitter:title" content=" JVM解释器初始化过程(二) | Corner XX daily log ">
+
+	<meta property="og:type" content="article">
+	<meta name="twitter:card" content="summary">
+
+	<meta name="description" content=" JVM解释器初始化过程(二) | Corner XX daily log ">
+	<meta property="og:description" content=" JVM解释器初始化过程(二) | Corner XX daily log " />
+	<meta name="twitter:description" content=" JVM解释器初始化过程(二) | Corner XX daily log " />
+
+	<link rel="icon" type="image/x-icon" href="http://yoursite.com/asset/img/favicon.png">
+
+	<link rel="image_src" href="http://yoursite.com/asset/img/logo.png" >
+	<meta property="og:image" content="http://yoursite.com/asset/img/logo.png" />
+
+	<link href="http://yoursite.com/atom.xml" title="Corner XX daily log" type="application/atom+xml" rel="alternative">
+
+	<link rel="canonical" href="/2016/09/19/jvm-interpreter-2/index.html">
+
+	<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.19.3/css/semantic.min.css">
+	<link rel="stylesheet" href="/asset/css/style.css">
+
+	<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.19.3/javascript/semantic.min.js"></script>
+
 </head>
 
 <body>
-  <div id="container">
-    <div class="left-col">
-      <div class="overlay"></div>
-<div class="intrude-less">
-	<header id="header" class="inner">
-		<a href="/" class="profilepic">
-			
-			<img src="/img/suolong.png" class="js-avatar">
-			
-		</a>
 
-		<hgroup>
-		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
-		</hgroup>
 
-		
-
-		<nav class="header-menu">
-			<ul>
-			
-				<li><a href="/">主页</a></li>
-	        
-				<li><a href="/tags/随笔">随笔</a></li>
-	        
-			</ul>
-		</nav>
-		<nav class="header-smart-menu">
-	        
-    		
-    			
-    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
-    			
-    			
-            
-    			
-    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
-    			
-    			
-            
-    			
-    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">友链</a>
-    			
-    			
-            
-    			
-    			<a class="js-smart-menu" data-idx="3" href="javascript:void(0)">关于我</a>
-    			
-    			
-            
-		</nav>
-		<nav class="header-nav">
-			<div class="social">
-				
-					<a class="github" target="_blank" href="#" title="github">github</a>
-		        
-					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
-		        
-					<a class="rss" target="_blank" href="#" title="rss">rss</a>
-		        
-					<a class="zhihu" target="_blank" href="#" title="zhihu">zhihu</a>
-		        
-			</div>
-		</nav>
-	</header>		
-</div>
-
-    </div>
-    <div class="mid-col">
-      <nav id="mobile-nav">
-  	<div class="overlay">
-  		<div class="slider-trigger"><i class="icon-list"></i></div>
-  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
-  	</div>
-	<div class="intrude-less">
-		<header id="header" class="inner">
-			<div class="profilepic">
-				
-					<img src="/img/suolong.png" class="js-avatar">
-				
-			</div>
-			<hgroup>
-			  <h1 class="header-author">Corner XX</h1>
-			</hgroup>
-			
-			<nav class="header-menu">
-				<ul>
-				
-					<li><a href="/">主页</a></li>
-		        
-					<li><a href="/tags/随笔">随笔</a></li>
-		        
-				</ul>
-			</nav>
-			<nav class="header-nav">
-				<div class="social">
-					
-						<a class="github" target="_blank" href="#" title="github">github</a>
-			        
-						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
-			        
-						<a class="rss" target="_blank" href="#" title="rss">rss</a>
-			        
-						<a class="zhihu" target="_blank" href="#" title="zhihu">zhihu</a>
-			        
+	<div class="layout-header">
+		<div class="ui fixed transparent inverted main menu panel-header">
+			<div class="container box-header">
+				<div class="title item header-item">
+					<a href="/" title="null">Corner XX daily log</a>
 				</div>
-			</nav>
-		</header>				
+			</div>
+		</div>
 	</div>
-</nav>
 
-      <div class="body-wrap">
-        <article id="post-jvm-interpreter-2" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 class="article-title" itemprop="name">
-      JVM解释器初始化过程(二)
-    </h1>
-  
 
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。文中接着上一张进行描述。<br><a id="more"></a></p>
+	<div class="layout-menu">
+
+		<nav class="ui transparent vertical inverted labeled icon menu">
+
+			<a class="item" href="/">
+				<i class="home icon"></i>
+				Home
+			</a>
+
+			<a class="item" href="/archives">
+				<i class="sitemap icon"></i>
+				Sitemap
+			</a>
+
+			<a class="item" href="/page/">
+				<i class="browser icon"></i>
+				Page
+			</a>
+
+		</nav>
+
+	</div>
+
+	<div class="layout-menu-footer">
+
+		<nav class="ui transparent inverted menu">
+
+			<a class="item" href="/">
+				<i class="home icon"></i>
+				Home
+			</a>
+
+			<a class="item" href="/archives">
+				<i class="sitemap icon"></i>
+				Sitemap
+			</a>
+
+			<a class="item" href="/page/">
+				<i class="browser icon"></i>
+				Page
+			</a>
+
+		</nav>
+
+	</div>
+
+
+
+	<div class="layout-content">
+
+
+		<div class="panel-content">
+			<div class="ui grid box-content">
+				<div class="two wide column">
+					&nbsp;
+				</div>
+
+				<div class="twelve wide column">
+
+					<div class="box-post-item">
+						<article class="post-item" itemscope itemtype="http://schema.org/Article">
+
+
+
+
+							<p class="content-meta">
+								<span class="meta-date" itemprop="datePublished" content="2016-09-19">2016-09-19</span>
+
+
+							</p>
+
+
+							<h2 class="box-content-title">
+								<a href="/2016/09/19/jvm-interpreter-2/"  itemprop="url"><span class="content-title" itemprop="name">JVM解释器初始化过程(二)</span></a>
+							</h2>
+
+							<div class="content post-item-content" itemprop="articleBody">
+
+<p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。文中接着上一张进行描述。<br><a id="more"></a></p>
 <h1 id="JVM解释器初始化过程-二"><a href="#JVM解释器初始化过程-二" class="headerlink" title="JVM解释器初始化过程(二)"></a>JVM解释器初始化过程(二)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。</p>
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。文中接着上一张进行描述。</p>
 <h2 id="解释器初始化"><a href="#解释器初始化" class="headerlink" title="解释器初始化"></a>解释器初始化</h2><p>第一段没有什么要说的，把代码贴上来：<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div></pre></td><td class="code"><pre><div class="line">hotspot\src\share\vm\interpreter\interpreter.cpp:</div><div class="line">init_globals() -&gt; interpreter_init() :</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">interpreter_init</span><span class="params">()</span> </span>&#123;</div><div class="line">  Interpreter::initialize();</div><div class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> PRODUCT</span></div><div class="line">  <span class="keyword">if</span> (TraceBytecodes) BytecodeTracer::set_closure(BytecodeTracer::std_closure());</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">// PRODUCT</span></span></div><div class="line">  <span class="comment">// need to hit every safepoint in order to call zapping routine</span></div><div class="line">  <span class="comment">// register the interpreter</span></div><div class="line">  Forte::register_stub(</div><div class="line">    <span class="string">"Interpreter"</span>,</div><div class="line">    AbstractInterpreter::code()-&gt;code_start(),</div><div class="line">    AbstractInterpreter::code()-&gt;code_end()</div><div class="line">  );</div><div class="line"></div><div class="line">  <span class="comment">// notify JVMTI profiler</span></div><div class="line">  <span class="keyword">if</span> (JvmtiExport::should_post_dynamic_code_generated()) &#123;</div><div class="line">    JvmtiExport::post_dynamic_code_generated(<span class="string">"Interpreter"</span>,</div><div class="line">                                             AbstractInterpreter::code()-&gt;code_start(),</div><div class="line">                                             AbstractInterpreter::code()-&gt;code_end());</div><div class="line">  &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">void</span> TemplateInterpreter::initialize() &#123;</div><div class="line">  <span class="keyword">if</span> (<span class="number">_</span>code != <span class="literal">NULL</span>) <span class="keyword">return</span>;</div><div class="line">  <span class="comment">// assertions</span></div><div class="line">  assert((<span class="keyword">int</span>)Bytecodes::number_of_codes &lt;= (<span class="keyword">int</span>)DispatchTable::length,</div><div class="line">         <span class="string">"dispatch table too small"</span>);</div><div class="line"></div><div class="line">  AbstractInterpreter::initialize();</div><div class="line"></div><div class="line">  TemplateTable::initialize();</div><div class="line"></div><div class="line">  <span class="comment">// generate interpreter</span></div><div class="line">  &#123; ResourceMark rm;</div><div class="line">    <span class="function">TraceTime <span class="title">timer</span><span class="params">(<span class="string">"Interpreter generation"</span>, TraceStartupTime)</span></span>;</div><div class="line">    <span class="keyword">int</span> code_size = InterpreterCodeSize;</div><div class="line">    NOT_PRODUCT(code_size *= <span class="number">4</span>;)  <span class="comment">// debug uses extra interpreter code space</span></div><div class="line">    <span class="number">_</span>code = <span class="keyword">new</span> StubQueue(<span class="keyword">new</span> InterpreterCodeletInterface, code_size, <span class="literal">NULL</span>,</div><div class="line">                          <span class="string">"Interpreter"</span>);</div><div class="line">    <span class="function">InterpreterGenerator <span class="title">g</span><span class="params">(<span class="number">_</span>code)</span></span>;</div><div class="line">    <span class="keyword">if</span> (PrintInterpreter) print();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="comment">// initialize dispatch table</span></div><div class="line">  <span class="number">_</span>active_table = <span class="number">_</span>normal_table;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">void</span> AbstractInterpreter::initialize() &#123;</div><div class="line">  <span class="keyword">if</span> (<span class="number">_</span>code != <span class="literal">NULL</span>) <span class="keyword">return</span>;</div><div class="line"></div><div class="line">  <span class="comment">// make sure 'imported' classes are initialized</span></div><div class="line">  <span class="keyword">if</span> (CountBytecodes || TraceBytecodes || StopInterpreterAt) BytecodeCounter::reset();</div><div class="line">  <span class="keyword">if</span> (PrintBytecodeHistogram)                                BytecodeHistogram::reset();</div><div class="line">  <span class="keyword">if</span> (PrintBytecodePairHistogram)                            BytecodePairHistogram::reset();</div><div class="line"></div><div class="line">  InvocationCounter::reinitialize(DelayCompilationDuringStartup);</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
@@ -170,249 +141,60 @@
 <p>重点看<strong>set_entry_points_for_all_bytes</strong>。<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div></pre></td><td class="code"><pre><div class="line">hotspot\src\share\vm\interpreter\templateInterpreter.cpp:</div><div class="line"></div><div class="line">void TemplateInterpreterGenerator::set_entry_points_for_all_bytes() &#123;</div><div class="line">  for (int i = 0; i &lt; DispatchTable::length; i++) &#123;</div><div class="line">    Bytecodes::Code code = (Bytecodes::Code)i;</div><div class="line">    if (Bytecodes::is_defined(code)) &#123;</div><div class="line">      set_entry_points(code);</div><div class="line">    &#125; else &#123;</div><div class="line">      set_unimplemented(i);</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line">void TemplateInterpreterGenerator::set_entry_points(Bytecodes::Code code) &#123;</div><div class="line">  CodeletMark cm(_masm, Bytecodes::name(code), code);</div><div class="line">  // initialize entry points</div><div class="line">  assert(_unimplemented_bytecode    != NULL, "should have been generated before");</div><div class="line">  assert(_illegal_bytecode_sequence != NULL, "should have been generated before");</div><div class="line">  address bep = _illegal_bytecode_sequence;</div><div class="line">  address zep = _illegal_bytecode_sequence;</div><div class="line">  address cep = _illegal_bytecode_sequence;</div><div class="line">  address sep = _illegal_bytecode_sequence;</div><div class="line">  address aep = _illegal_bytecode_sequence;</div><div class="line">  address iep = _illegal_bytecode_sequence;</div><div class="line">  address lep = _illegal_bytecode_sequence;</div><div class="line">  address fep = _illegal_bytecode_sequence;</div><div class="line">  address dep = _illegal_bytecode_sequence;</div><div class="line">  address vep = _unimplemented_bytecode;</div><div class="line">  address wep = _unimplemented_bytecode;</div><div class="line">  // code for short &amp; wide version of bytecode</div><div class="line">  if (Bytecodes::is_defined(code)) &#123;</div><div class="line">    Template* t = TemplateTable::template_for(code);</div><div class="line">    assert(t-&gt;is_valid(), "just checking");</div><div class="line">    set_short_entry_points(t, bep, cep, sep, aep, iep, lep, fep, dep, vep);</div><div class="line">  &#125;</div><div class="line">  if (Bytecodes::wide_is_defined(code)) &#123;</div><div class="line">    Template* t = TemplateTable::template_for_wide(code);</div><div class="line">    assert(t-&gt;is_valid(), "just checking");</div><div class="line">    set_wide_entry_point(t, wep);</div><div class="line">  &#125;</div><div class="line">  // set entry points</div><div class="line">  EntryPoint entry(bep, zep, cep, sep, aep, iep, lep, fep, dep, vep);</div><div class="line">  Interpreter::_normal_table.set_entry(code, entry);</div><div class="line">  Interpreter::_wentry_point[code] = wep;</div><div class="line">&#125;</div><div class="line"></div><div class="line">void DispatchTable::set_entry(int i, EntryPoint&amp; entry) &#123;</div><div class="line">  assert(0 &lt;= i &amp;&amp; i &lt; length, "index out of bounds");</div><div class="line">  assert(number_of_states == 10, "check the code below");</div><div class="line">  _table[btos][i] = entry.entry(btos);</div><div class="line">  _table[ztos][i] = entry.entry(ztos);</div><div class="line">  _table[ctos][i] = entry.entry(ctos);</div><div class="line">  _table[stos][i] = entry.entry(stos);</div><div class="line">  _table[atos][i] = entry.entry(atos);</div><div class="line">  _table[itos][i] = entry.entry(itos);</div><div class="line">  _table[ltos][i] = entry.entry(ltos);</div><div class="line">  _table[ftos][i] = entry.entry(ftos);</div><div class="line">  _table[dtos][i] = entry.entry(dtos);</div><div class="line">  _table[vtos][i] = entry.entry(vtos);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
 <p>在这里同样区分了正常指令和宽指令。分别对应<strong>set_short_entry_points</strong>和<strong>set_wide_entry_point</strong>。<br>从代码中可以看出，解释器的跳转表<strong>_normal_table</strong>是一个二维表，第一维为<strong>TopState</strong>的各个状态，第二位为各个JVM指令标号，所以，这个跳转表为每一个<strong>TopState</strong>都维护了对应的虚拟机指令解释器。</p>
 
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/19/jvm-interpreter-2/" class="archive-article-date">
-  	<time datetime="2016-09-19T07:43:30.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-19</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+
+							</div>
+
+
+							<div class="content-tag">
+
+<a class="tag-link" href="/tags/JVM/">JVM</a>
+
+							</div>
+
+
+
+						</article>
+					</div>
+				</div>
+
+				<div class="two wide column">
+					&nbsp;
+				</div>
+
+			</div>
+
+			<div class="panel-post-nav">
+				<div class="box-post-nav">
+		
+
+					<a href="/2016/09/19/object_init_1/" title="Object 初始化过程(一)">&larr; Prev</a>
+
+
+
+					<a href="/2016/09/19/jvm-interpreter-3/" title="JVM解释器初始化过程(三)">Next &rarr;</a>
+
+
+				</div>
+			</div>
+		</div>
+
+
 	</div>
 
-      
+	<div class="layout-footer" style="clear: both">
+		<div class="panel-footer">
+			<div class="box-footer">
+				<footer class="footer">
+					<p class="cr">&copy; 2016 <a href="https://github.com/foreachsam/"  target="_blank">Corner XX</a> </p>
 
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-  
-<nav id="article-nav">
-  
-    <a href="/2016/09/19/object_init_1/" id="article-nav-newer" class="article-nav-link-wrap">
-      <i class="icon-circle-left"></i>
-      <div class="article-nav-title">
-        
-          Object 初始化过程(一)
-        
-      </div>
-    </a>
-  
-  
-    <a href="/2016/09/19/jvm-interpreter-3/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">JVM解释器初始化过程(三)</div>
-      <i class="icon-circle-right"></i>
-    </a>
-  
-</nav>
-
-
-
-
-<div class="share_jia">
-	<!-- JiaThis Button BEGIN -->
-	<div class="jiathis_style">
-		<span class="jiathis_txt">Share to: &nbsp; </span>
-		<a class="jiathis_button_facebook"></a> 
-	    <a class="jiathis_button_twitter"></a>
-	    <a class="jiathis_button_plus"></a> 
-	    <a class="jiathis_button_tsina"></a>
-		<a class="jiathis_button_cqq"></a>
-		<a class="jiathis_button_douban"></a>
-		<a class="jiathis_button_weixin"></a>
-		<a class="jiathis_button_tumblr"></a>
-    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+					<span class="theme">Powered: <a href="http://hexo.io/" target="_blank">Hexo</a>, Theme: <a href="https://github.com/foreachsam/hexo-theme-aiki" target="_blank">Aiki</a></span>
+				</footer>
+			</div>
+		</div>
 	</div>
-	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
-	<!-- JiaThis Button END -->
-</div>
 
 
 
 
-
-
-
-
-
-      </div>
-      <footer id="footer">
-  <div class="outer">
-    <div id="footer-info">
-    	<div class="footer-left">
-    		&copy; 2016 Corner XX
-    	</div>
-      	<div class="footer-right">
-      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
-      	</div>
-    </div>
-  </div>
-</footer>
-    </div>
-    <script>
-	var yiliaConfig = {
-		fancybox: true,
-		mathjax: true,
-		animate: true,
-		isHome: false,
-		isPost: true,
-		isArchive: false,
-		isTag: false,
-		isCategory: false,
-		open_in_new: false,
-		root: "/"
-	}
-</script>
-
-<script src="/./main.js"></script>
-
-
-
-
-
-<script type="text/x-mathjax-config">
-MathJax.Hub.Config({
-    tex2jax: {
-        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
-        processEscapes: true,
-        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-    }
-});
-
-MathJax.Hub.Queue(function() {
-    var all = MathJax.Hub.getAllJax(), i;
-    for(i=0; i < all.length; i += 1) {
-        all[i].SourceElement().parentNode.className += ' has-jax';                 
-    }       
-});
-</script>
-
-<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-</script>
-
-
-    
-<div class="tools-col">
-  <ul class="btn-wrap">
-    
-      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
-    
-    
-      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
-    
-    
-      <li data-hook="tools-section-friends"><span class="text">友链</span><i class="icon-link"></i></li>
-    
-    
-      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
-    
-  </ul>
-  <div class="tools-wrap">
-    
-    	<section class="tools-section tools-section-all chose">
-    	</section>
-    
-
-    
-    	<section class="tools-section tools-section-tag">
-    			<div class="widget tagcloud" id="js-tagcloud">
-    				<a href="/tags/JVM/" style="font-size: 10px;">JVM</a>
-    			</div>
-    	</section>
-    
-
-    
-    	<section class="tools-section tools-section-friends">
-  		
-  			<div class="friends-wrap" id="js-friends">
-  			
-  	          <a target="_blank" class="main-nav-link switch-friends-link" href="https://znipps.github.io/">链接1</a>
-  	        
-  	        </div>
-  		
-    	</section>
-    
-
-    
-    	<section class="tools-section tools-section-me">
-  	  	
-  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
-  	  	
-    	</section>
-    
-  </div>
-  
-</div>
-    <!-- Root element of PhotoSwipe. Must have class pswp. -->
-<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
-
-    <!-- Background of PhotoSwipe. 
-         It's a separate element as animating opacity is faster than rgba(). -->
-    <div class="pswp__bg"></div>
-
-    <!-- Slides wrapper with overflow:hidden. -->
-    <div class="pswp__scroll-wrap">
-
-        <!-- Container that holds slides. 
-            PhotoSwipe keeps only 3 of them in the DOM to save memory.
-            Don't modify these 3 pswp__item elements, data is added later on. -->
-        <div class="pswp__container">
-            <div class="pswp__item"></div>
-            <div class="pswp__item"></div>
-            <div class="pswp__item"></div>
-        </div>
-
-        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
-        <div class="pswp__ui pswp__ui--hidden">
-
-            <div class="pswp__top-bar">
-
-                <!--  Controls are self-explanatory. Order can be changed. -->
-
-                <div class="pswp__counter"></div>
-
-                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
-
-                <button class="pswp__button pswp__button--share" title="Share"></button>
-
-                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
-
-                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
-
-                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
-                <!-- element will get class pswp__preloader--active when preloader is running -->
-                <div class="pswp__preloader">
-                    <div class="pswp__preloader__icn">
-                      <div class="pswp__preloader__cut">
-                        <div class="pswp__preloader__donut"></div>
-                      </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
-                <div class="pswp__share-tooltip"></div> 
-            </div>
-
-            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
-            </button>
-
-            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
-            </button>
-
-            <div class="pswp__caption">
-                <div class="pswp__caption__center"></div>
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-  </div>
 </body>
 </html>
