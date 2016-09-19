@@ -1,132 +1,91 @@
 <!DOCTYPE html>
-<html lang="zh-Hant-TW">
+<html>
 <head>
+  <meta charset="utf-8">
+  
+  <title>JVM解释器初始化(一) | Corner XX daily log</title>
+  <meta name="author" content="Corner XX">
+  
+  <meta name="description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="generator" content="Hexo 2.6.0"/>
 
-	<meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta property="og:title" content="JVM解释器初始化(一)"/>
+  <meta property="og:site_name" content="Corner XX daily log"/>
 
-	<title> JVM解释器初始化(一) | Corner XX daily log </title>
-	<meta property="og:title" content=" JVM解释器初始化(一) | Corner XX daily log " />
-	<meta name="twitter:title" content=" JVM解释器初始化(一) | Corner XX daily log ">
+  
+    <meta property="og:image" content="undefined"/>
+  
 
-	<meta property="og:type" content="article">
-	<meta name="twitter:card" content="summary">
+  <link href="/favicon.png" rel="shortcut icon">
 
-	<meta name="description" content=" JVM解释器初始化(一) | Corner XX daily log ">
-	<meta property="og:description" content=" JVM解释器初始化(一) | Corner XX daily log " />
-	<meta name="twitter:description" content=" JVM解释器初始化(一) | Corner XX daily log " />
+  
+    <link rel="stylesheet" href="/css/highlightjs/solarized_dark.css">
+  
 
-	<link rel="icon" type="image/x-icon" href="http://yoursite.com/asset/img/favicon.png">
+  <link rel="alternate" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
 
-	<link rel="image_src" href="http://yoursite.com/asset/img/logo.png" >
-	<meta property="og:image" content="http://yoursite.com/asset/img/logo.png" />
+  <link href="/css/site.css" rel="stylesheet">
+  <script type="text/javascript" src="/js/jquery.min.js"></script>
+  <script type="text/javascript" src="/js/jquery.caption.min.js"></script>
+  <link href="/css/captionjs.min.css" rel="stylesheet"/>
+  <script type="text/javascript" src="/js/ewal.js"></script>
 
-	<link href="http://yoursite.com/atom.xml" title="Corner XX daily log" type="application/atom+xml" rel="alternative">
+  
 
-	<link rel="canonical" href="/2016/09/19/jvm-interpreter-1/index.html">
-
-	<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.19.3/css/semantic.min.css">
-	<link rel="stylesheet" href="/asset/css/style.css">
-
-	<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.19.3/javascript/semantic.min.js"></script>
 
 </head>
 
 <body>
+  
+
+<div class="navbar navbar-default navbar-static-top">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/"><span class="text-primary">Corner XX daily log</span></a>
+    </div>
+    <div class="collapse navbar-collapse navbar-right">
+      <ul class="nav navbar-nav">
+        
+          <li><a href="/">Home</a></li>
+        
+          <li><a href="/archives">Archives</a></li>
+        
+      </ul>
+      <ul class="nav navbar-nav pull-right">
+      
+      
+      
+      
+      </ul>
+    </div>
+  </div>
+</div>
 
 
-	<div class="layout-header">
-		<div class="ui fixed transparent inverted main menu panel-header">
-			<div class="container box-header">
-				<div class="title item header-item">
-					<a href="/" title="null">Corner XX daily log</a>
-				</div>
-			</div>
-		</div>
-	</div>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-8"><article class="post">
+  
+    <div class="post-date">
+      <time datetime="2016-09-19T05:34:24.000Z">2016-09-19</time>
+    </div>
+    
+  
+    <h1 class="title">JVM解释器初始化(一)</h1>
+  
 
-
-	<div class="layout-menu">
-
-		<nav class="ui transparent vertical inverted labeled icon menu">
-
-			<a class="item" href="/">
-				<i class="home icon"></i>
-				Home
-			</a>
-
-			<a class="item" href="/archives">
-				<i class="sitemap icon"></i>
-				Sitemap
-			</a>
-
-			<a class="item" href="/page/">
-				<i class="browser icon"></i>
-				Page
-			</a>
-
-		</nav>
-
-	</div>
-
-	<div class="layout-menu-footer">
-
-		<nav class="ui transparent inverted menu">
-
-			<a class="item" href="/">
-				<i class="home icon"></i>
-				Home
-			</a>
-
-			<a class="item" href="/archives">
-				<i class="sitemap icon"></i>
-				Sitemap
-			</a>
-
-			<a class="item" href="/page/">
-				<i class="browser icon"></i>
-				Page
-			</a>
-
-		</nav>
-
-	</div>
-
-
-
-	<div class="layout-content">
-
-
-		<div class="panel-content">
-			<div class="ui grid box-content">
-				<div class="two wide column">
-					&nbsp;
-				</div>
-
-				<div class="twelve wide column">
-
-					<div class="box-post-item">
-						<article class="post-item" itemscope itemtype="http://schema.org/Article">
-
-
-
-
-							<p class="content-meta">
-								<span class="meta-date" itemprop="datePublished" content="2016-09-19">2016-09-19</span>
-
-
-							</p>
-
-
-							<h2 class="box-content-title">
-								<a href="/2016/09/19/jvm-interpreter-1/"  itemprop="url"><span class="content-title" itemprop="name">JVM解释器初始化(一)</span></a>
-							</h2>
-
-							<div class="content post-item-content" itemprop="articleBody">
-
-<p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。<br><a id="more"></a></p>
+  
+  <div class="post-content">
+    
+      <p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。<br><a id="more"></a></p>
 <h1 id="JVM解释器初始化过程-一"><a href="#JVM解释器初始化过程-一" class="headerlink" title="JVM解释器初始化过程(一)"></a>JVM解释器初始化过程(一)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。</p>
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。</p>
 <h2 id="解释器初始化"><a href="#解释器初始化" class="headerlink" title="解释器初始化"></a>解释器初始化</h2><p>直接进入正题，如下：<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">hotspot\src\share\vm\interpreter\bytecodes.hpp:</div><div class="line"></div><div class="line"><span class="keyword">class</span> Bytecodes: AllStatic &#123;</div><div class="line"> ...</div><div class="line"></div><div class="line"> <span class="keyword">private</span>:</div><div class="line">  <span class="keyword">static</span> <span class="keyword">bool</span>        <span class="number">_</span>is_initialized;</div><div class="line">  <span class="keyword">static</span> <span class="keyword">const</span> <span class="keyword">char</span>* <span class="number">_</span>name          [number_of_codes];</div><div class="line">  <span class="keyword">static</span> BasicType   <span class="number">_</span>result_type   [number_of_codes];</div><div class="line">  <span class="keyword">static</span> s_char      <span class="number">_</span>depth         [number_of_codes];</div><div class="line">  <span class="keyword">static</span> u_char      <span class="number">_l</span>engths       [number_of_codes];</div><div class="line">  <span class="keyword">static</span> Code        <span class="number">_</span>java_code     [number_of_codes];</div><div class="line">  <span class="keyword">static</span> jchar       <span class="number">_f</span>lags         [(<span class="number">1</span>&lt;&lt;BitsPerByte)*<span class="number">2</span>]; <span class="comment">// all second page for wide formats</span></div></pre></td></tr></table></figure></p>
@@ -163,55 +122,113 @@
 <p>来看看几个例子。<br>第一sipush指令：<br>描述：将一个 short 类型数据入栈，无符号数 byte1 和 byte2 通过（ byte1 &lt;&lt; 8） | byte2 方式构造成一个short 类型数值，然后此数值带符号扩展为一个 int 类型的值 value，然后将 value 压入到操作数栈中。<br>定义：<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//  bytecode               bytecode name           format   wide f.   result tp  stk traps</span></div><div class="line">def(<span class="number">_</span>sipush              , <span class="string">"sipush"</span>              , <span class="string">"bcc"</span>  , <span class="literal">NULL</span>    , T_INT    ,  <span class="number">1</span>, <span class="literal">false</span>);</div></pre></td></tr></table></figure></p>
 <p>解析：可以看出，sipush指令，，长度为3，format为bcc，返回类型为int,栈深为1，不可中断。</p>
 
+    
+  </div>
+  
+    
 
-							</div>
+    
+  
+  <div class="tags">
+    <a href="/tags/JVM/">JVM</a>
+  </div>
+
+  
+  <div class="addthis_toolbox addthis_default_style 
+addthis_32x32_style" data-addthis-url="http://yoursite.com/2016/09/19/jvm-interpreter-1/" data-addthis-title="JVM解释器初始化(一)">
+<a class="addthis_button_preferred_1"></a>
+<a class="addthis_button_preferred_2"></a>
+<a class="addthis_button_preferred_3"></a>
+<a class="addthis_button_preferred_4"></a>
+<a class="addthis_button_compact"></a>
+<a class="addthis_counter addthis_bubble_style"></a>
+</div>
+  
+    <ul class="next_prev">
+      
+      
+        <li class="next">
+        <a class="btn btn-success" role="button" href="/2016/09/19/jvm-interpreter-3/">
+          Nächster Beitrag
+        </a></li>
+      
+    </ul>
+  
+  
+
+</article></div>
+      <div class="col-md-offset-1 col-md-3"><div class="sidebar-nav">
+
+  <div class="widget">
+  	  <form action=""
+    method="get"
+    data-action="https://google.com.br/search?q=site:yoursite.com"
+    accept-charset="utf-8"
+    data-js="google-search-form">
+  <div class="input-group">
+    <input class="form-control" type="search" name="q" results="0" placeholder="Suche in Beiträgen" data-js="google-search-input" style="padding-left: 0; padding-right: 0">
+    <span class="input-group-btn">
+      <button class="btn btn-default" type="submit">
+        <span class="glyphicon glyphicon-search"></span> 
+      </button>
+    </span>
+  </div>
+</form>
+  </div>
+
+  <div class="widget">
+  	
+
+  </div>
+
+  <div class="widget">
+  	
+<h3 class="title">Tags</h3>
+<div class="well" style="line-height:14pt">
+
+  
+  <a style="font-size: 142%" href="/tags/JVM/">JVM</a>
+  
+
+</div>
 
 
-							<div class="content-tag">
+  </div>
 
-<a class="tag-link" href="/tags/JVM/">JVM</a>
+  <div class="widget">
+  	
+<h3>Tags</h3>
+<ul class="list-group">
 
-							</div>
+  
+  <li class="list-group-item">
+    <span class="badge">7</span>
+    <a href="/tags/JVM/">JVM</a>
+  </li>
+  
 
-
-
-						</article>
-					</div>
-				</div>
-
-				<div class="two wide column">
-					&nbsp;
-				</div>
-
-			</div>
-
-			<div class="panel-post-nav">
-				<div class="box-post-nav">
-		
-
-					<a href="/2016/09/19/jvm-interpreter-3/" title="JVM解释器初始化过程(三)">&larr; Prev</a>
+</ul>
 
 
+  </div>
+
+</div>
+</div>
+    </div>
+  </div>
+  <div id="push"></div>
+  <div class="navbar navbar-footer">
+  <div class="container">
+    <p class="navbar-center navbar-text">
+      
+      &copy; 2016 Corner XX
+      
+    </p>
+  </div>
+</div>
+  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0-wip/js/bootstrap.min.js"></script>
 
 
-				</div>
-			</div>
-		</div>
-
-
-	</div>
-
-	<div class="layout-footer" style="clear: both">
-		<div class="panel-footer">
-			<div class="box-footer">
-				<footer class="footer">
-					<p class="cr">&copy; 2016 <a href="https://github.com/foreachsam/"  target="_blank">Corner XX</a> </p>
-
-					<span class="theme">Powered: <a href="http://hexo.io/" target="_blank">Hexo</a>, Theme: <a href="https://github.com/foreachsam/hexo-theme-aiki" target="_blank">Aiki</a></span>
-				</footer>
-			</div>
-		</div>
-	</div>
 
 
 

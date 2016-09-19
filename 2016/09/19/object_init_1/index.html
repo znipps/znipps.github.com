@@ -1,132 +1,91 @@
 <!DOCTYPE html>
-<html lang="zh-Hant-TW">
+<html>
 <head>
+  <meta charset="utf-8">
+  
+  <title>Object 初始化过程(一) | Corner XX daily log</title>
+  <meta name="author" content="Corner XX">
+  
+  <meta name="description" content="Object类初始化前必须完成JVM规范中的加载，链接等。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="generator" content="Hexo 2.6.0"/>
 
-	<meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta property="og:title" content="Object 初始化过程(一)"/>
+  <meta property="og:site_name" content="Corner XX daily log"/>
 
-	<title> Object 初始化过程(一) | Corner XX daily log </title>
-	<meta property="og:title" content=" Object 初始化过程(一) | Corner XX daily log " />
-	<meta name="twitter:title" content=" Object 初始化过程(一) | Corner XX daily log ">
+  
+    <meta property="og:image" content="undefined"/>
+  
 
-	<meta property="og:type" content="article">
-	<meta name="twitter:card" content="summary">
+  <link href="/favicon.png" rel="shortcut icon">
 
-	<meta name="description" content=" Object 初始化过程(一) | Corner XX daily log ">
-	<meta property="og:description" content=" Object 初始化过程(一) | Corner XX daily log " />
-	<meta name="twitter:description" content=" Object 初始化过程(一) | Corner XX daily log " />
+  
+    <link rel="stylesheet" href="/css/highlightjs/solarized_dark.css">
+  
 
-	<link rel="icon" type="image/x-icon" href="http://yoursite.com/asset/img/favicon.png">
+  <link rel="alternate" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
 
-	<link rel="image_src" href="http://yoursite.com/asset/img/logo.png" >
-	<meta property="og:image" content="http://yoursite.com/asset/img/logo.png" />
+  <link href="/css/site.css" rel="stylesheet">
+  <script type="text/javascript" src="/js/jquery.min.js"></script>
+  <script type="text/javascript" src="/js/jquery.caption.min.js"></script>
+  <link href="/css/captionjs.min.css" rel="stylesheet"/>
+  <script type="text/javascript" src="/js/ewal.js"></script>
 
-	<link href="http://yoursite.com/atom.xml" title="Corner XX daily log" type="application/atom+xml" rel="alternative">
+  
 
-	<link rel="canonical" href="/2016/09/19/object_init_1/index.html">
-
-	<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.19.3/css/semantic.min.css">
-	<link rel="stylesheet" href="/asset/css/style.css">
-
-	<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.19.3/javascript/semantic.min.js"></script>
 
 </head>
 
 <body>
+  
+
+<div class="navbar navbar-default navbar-static-top">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/"><span class="text-primary">Corner XX daily log</span></a>
+    </div>
+    <div class="collapse navbar-collapse navbar-right">
+      <ul class="nav navbar-nav">
+        
+          <li><a href="/">Home</a></li>
+        
+          <li><a href="/archives">Archives</a></li>
+        
+      </ul>
+      <ul class="nav navbar-nav pull-right">
+      
+      
+      
+      
+      </ul>
+    </div>
+  </div>
+</div>
 
 
-	<div class="layout-header">
-		<div class="ui fixed transparent inverted main menu panel-header">
-			<div class="container box-header">
-				<div class="title item header-item">
-					<a href="/" title="null">Corner XX daily log</a>
-				</div>
-			</div>
-		</div>
-	</div>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-8"><article class="post">
+  
+    <div class="post-date">
+      <time datetime="2016-09-19T09:43:37.000Z">2016-09-19</time>
+    </div>
+    
+  
+    <h1 class="title">Object 初始化过程(一)</h1>
+  
 
-
-	<div class="layout-menu">
-
-		<nav class="ui transparent vertical inverted labeled icon menu">
-
-			<a class="item" href="/">
-				<i class="home icon"></i>
-				Home
-			</a>
-
-			<a class="item" href="/archives">
-				<i class="sitemap icon"></i>
-				Sitemap
-			</a>
-
-			<a class="item" href="/page/">
-				<i class="browser icon"></i>
-				Page
-			</a>
-
-		</nav>
-
-	</div>
-
-	<div class="layout-menu-footer">
-
-		<nav class="ui transparent inverted menu">
-
-			<a class="item" href="/">
-				<i class="home icon"></i>
-				Home
-			</a>
-
-			<a class="item" href="/archives">
-				<i class="sitemap icon"></i>
-				Sitemap
-			</a>
-
-			<a class="item" href="/page/">
-				<i class="browser icon"></i>
-				Page
-			</a>
-
-		</nav>
-
-	</div>
-
-
-
-	<div class="layout-content">
-
-
-		<div class="panel-content">
-			<div class="ui grid box-content">
-				<div class="two wide column">
-					&nbsp;
-				</div>
-
-				<div class="twelve wide column">
-
-					<div class="box-post-item">
-						<article class="post-item" itemscope itemtype="http://schema.org/Article">
-
-
-
-
-							<p class="content-meta">
-								<span class="meta-date" itemprop="datePublished" content="2016-09-19">2016-09-19</span>
-
-
-							</p>
-
-
-							<h2 class="box-content-title">
-								<a href="/2016/09/19/object_init_1/"  itemprop="url"><span class="content-title" itemprop="name">Object 初始化过程(一)</span></a>
-							</h2>
-
-							<div class="content post-item-content" itemprop="articleBody">
-
-<p>Object类初始化前必须完成JVM规范中的加载，链接等。<br><a id="more"></a></p>
+  
+  <div class="post-content">
+    
+      <p>Object类初始化前必须完成JVM规范中的加载，链接等。<br><a id="more"></a></p>
 <h1 id="Object-初始化过程-一"><a href="#Object-初始化过程-一" class="headerlink" title="Object 初始化过程(一)"></a>Object 初始化过程(一)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。</p>
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Object类初始化前必须完成JVM规范中的加载，链接等。</p>
 <h2 id="执行过程分析"><a href="#执行过程分析" class="headerlink" title="执行过程分析"></a>执行过程分析</h2><p>在执行初始化的过程中，在内存中表示的<strong>instanceKlass</strong>都已经建立好了映射关系，<strong>instanceKlass</strong>已经建立好了相关的数据和控制结构，供运行时使用。在初始化之前，解释器会验证类是否已经链接，保证符合JVM规范。<br>在初始过程中实现的代码逻辑复杂，一段段来看:<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">hotspot\src\share\vm\runtime\thread.cpp:</div><div class="line"></div><div class="line">// See "The Virtual Machine Specification" section 2.16.5 for a detailed explanation of the class initialization</div><div class="line">// process. The step comments refers to the procedure described in that section.</div><div class="line">// Note: implementation moved to static method to expose the this pointer.</div><div class="line">void instanceKlass::initialize(TRAPS) &#123;</div><div class="line">  if (this-&gt;should_be_initialized()) &#123;</div><div class="line">    HandleMark hm(THREAD);</div><div class="line">    instanceKlassHandle this_oop(THREAD, this-&gt;as_klassOop());</div><div class="line">    initialize_impl(this_oop, CHECK);</div><div class="line">    // Note: at this point the class may be initialized</div><div class="line">    //       OR it may be in the state of being initialized</div><div class="line">    //       in case of recursive initialization!</div><div class="line">  &#125; else &#123;</div><div class="line">    assert(is_initialized(), "sanity check");</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
@@ -153,57 +112,118 @@
 <p><strong>zerolocals</strong>类型表示普通方法，在这里我们的<strong>method-&gt;interpreter_entry</strong>指的就是这个普通方法类型。这个是JVM会调用方法的入口点。<br>另外，我们来看一下返回类型：<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> BasicType <span class="title">runtime_type_from</span><span class="params">(JavaValue* result)</span> </span>&#123;</div><div class="line">  <span class="keyword">switch</span> (result-&gt;get_type()) &#123;</div><div class="line">    <span class="keyword">case</span> T_BOOLEAN: <span class="comment">// fall through</span></div><div class="line">    <span class="keyword">case</span> T_CHAR   : <span class="comment">// fall through</span></div><div class="line">    <span class="keyword">case</span> T_SHORT  : <span class="comment">// fall through</span></div><div class="line">    <span class="keyword">case</span> T_INT    : <span class="comment">// fall through</span></div><div class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> _LP64</span></div><div class="line">    <span class="keyword">case</span> T_OBJECT : <span class="comment">// fall through</span></div><div class="line">    <span class="keyword">case</span> T_ARRAY  : <span class="comment">// fall through</span></div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">    <span class="keyword">case</span> T_BYTE   : <span class="comment">// fall through</span></div><div class="line">    <span class="keyword">case</span> T_VOID   : <span class="keyword">return</span> T_INT;</div><div class="line">    <span class="keyword">case</span> T_LONG   : <span class="keyword">return</span> T_LONG;</div><div class="line">    <span class="keyword">case</span> T_FLOAT  : <span class="keyword">return</span> T_FLOAT;</div><div class="line">    <span class="keyword">case</span> T_DOUBLE : <span class="keyword">return</span> T_DOUBLE;</div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> _LP64</span></div><div class="line">    <span class="keyword">case</span> T_ARRAY  : <span class="comment">// fall through</span></div><div class="line">    <span class="keyword">case</span> T_OBJECT:  <span class="keyword">return</span> T_OBJECT;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">  &#125;</div><div class="line">  ShouldNotReachHere();</div><div class="line">  <span class="keyword">return</span> T_ILLEGAL;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
 <p>从这个方法中，我们可以明显看出，返回类型<strong>T_BOOLEAN，T_CHAR，T_SHORT，T_INT，T_BYTE，T_VOID</strong>都是作为T_INT处理的，也就是说这几个类型返回的是T_INT。<br>还有就是，以下这段代码将<strong>result</strong>作为指针处理，需要注意的是result是在方法中分配的，也就是说这个指针指向的是栈中的某个位置。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">intptr_t</span>* result_val_address = (<span class="keyword">intptr_t</span>*)(result-&gt;get_value_addr());</div></pre></td></tr></table></figure></p>
 
+    
+  </div>
+  
+    
 
-							</div>
+    
+  
+  <div class="tags">
+    <a href="/tags/JVM/">JVM</a>
+  </div>
+
+  
+  <div class="addthis_toolbox addthis_default_style 
+addthis_32x32_style" data-addthis-url="http://yoursite.com/2016/09/19/object_init_1/" data-addthis-title="Object 初始化过程(一)">
+<a class="addthis_button_preferred_1"></a>
+<a class="addthis_button_preferred_2"></a>
+<a class="addthis_button_preferred_3"></a>
+<a class="addthis_button_preferred_4"></a>
+<a class="addthis_button_compact"></a>
+<a class="addthis_counter addthis_bubble_style"></a>
+</div>
+  
+    <ul class="next_prev">
+      
+        <li class="prev">
+        <a class="btn btn-success" role="button" href="/2016/09/19/jvm-interpreter-2/">
+          Vorheriger Beitrag
+        </a></li>
+      
+      
+        <li class="next">
+        <a class="btn btn-success" role="button" href="/2016/09/19/object_init_2/">
+          Nächster Beitrag
+        </a></li>
+      
+    </ul>
+  
+  
+
+</article></div>
+      <div class="col-md-offset-1 col-md-3"><div class="sidebar-nav">
+
+  <div class="widget">
+  	  <form action=""
+    method="get"
+    data-action="https://google.com.br/search?q=site:yoursite.com"
+    accept-charset="utf-8"
+    data-js="google-search-form">
+  <div class="input-group">
+    <input class="form-control" type="search" name="q" results="0" placeholder="Suche in Beiträgen" data-js="google-search-input" style="padding-left: 0; padding-right: 0">
+    <span class="input-group-btn">
+      <button class="btn btn-default" type="submit">
+        <span class="glyphicon glyphicon-search"></span> 
+      </button>
+    </span>
+  </div>
+</form>
+  </div>
+
+  <div class="widget">
+  	
+
+  </div>
+
+  <div class="widget">
+  	
+<h3 class="title">Tags</h3>
+<div class="well" style="line-height:14pt">
+
+  
+  <a style="font-size: 142%" href="/tags/JVM/">JVM</a>
+  
+
+</div>
 
 
-							<div class="content-tag">
+  </div>
 
-<a class="tag-link" href="/tags/JVM/">JVM</a>
+  <div class="widget">
+  	
+<h3>Tags</h3>
+<ul class="list-group">
 
-							</div>
+  
+  <li class="list-group-item">
+    <span class="badge">7</span>
+    <a href="/tags/JVM/">JVM</a>
+  </li>
+  
 
-
-
-						</article>
-					</div>
-				</div>
-
-				<div class="two wide column">
-					&nbsp;
-				</div>
-
-			</div>
-
-			<div class="panel-post-nav">
-				<div class="box-post-nav">
-		
-
-					<a href="/2016/09/19/object_init_2/" title="Object 初始化过程(二)">&larr; Prev</a>
+</ul>
 
 
+  </div>
 
-					<a href="/2016/09/19/jvm-interpreter-2/" title="JVM解释器初始化过程(二)">Next &rarr;</a>
+</div>
+</div>
+    </div>
+  </div>
+  <div id="push"></div>
+  <div class="navbar navbar-footer">
+  <div class="container">
+    <p class="navbar-center navbar-text">
+      
+      &copy; 2016 Corner XX
+      
+    </p>
+  </div>
+</div>
+  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0-wip/js/bootstrap.min.js"></script>
 
 
-				</div>
-			</div>
-		</div>
-
-
-	</div>
-
-	<div class="layout-footer" style="clear: both">
-		<div class="panel-footer">
-			<div class="box-footer">
-				<footer class="footer">
-					<p class="cr">&copy; 2016 <a href="https://github.com/foreachsam/"  target="_blank">Corner XX</a> </p>
-
-					<span class="theme">Powered: <a href="http://hexo.io/" target="_blank">Hexo</a>, Theme: <a href="https://github.com/foreachsam/hexo-theme-aiki" target="_blank">Aiki</a></span>
-				</footer>
-			</div>
-		</div>
-	</div>
 
 
 

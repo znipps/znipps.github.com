@@ -1,132 +1,91 @@
 <!DOCTYPE html>
-<html lang="zh-Hant-TW">
+<html>
 <head>
+  <meta charset="utf-8">
+  
+  <title>JVM解释器初始化过程(三) | Corner XX daily log</title>
+  <meta name="author" content="Corner XX">
+  
+  <meta name="description" content="文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。文中接着上一张进行描述。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="generator" content="Hexo 2.6.0"/>
 
-	<meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta property="og:title" content="JVM解释器初始化过程(三)"/>
+  <meta property="og:site_name" content="Corner XX daily log"/>
 
-	<title> JVM解释器初始化过程(三) | Corner XX daily log </title>
-	<meta property="og:title" content=" JVM解释器初始化过程(三) | Corner XX daily log " />
-	<meta name="twitter:title" content=" JVM解释器初始化过程(三) | Corner XX daily log ">
+  
+    <meta property="og:image" content="undefined"/>
+  
 
-	<meta property="og:type" content="article">
-	<meta name="twitter:card" content="summary">
+  <link href="/favicon.png" rel="shortcut icon">
 
-	<meta name="description" content=" JVM解释器初始化过程(三) | Corner XX daily log ">
-	<meta property="og:description" content=" JVM解释器初始化过程(三) | Corner XX daily log " />
-	<meta name="twitter:description" content=" JVM解释器初始化过程(三) | Corner XX daily log " />
+  
+    <link rel="stylesheet" href="/css/highlightjs/solarized_dark.css">
+  
 
-	<link rel="icon" type="image/x-icon" href="http://yoursite.com/asset/img/favicon.png">
+  <link rel="alternate" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
 
-	<link rel="image_src" href="http://yoursite.com/asset/img/logo.png" >
-	<meta property="og:image" content="http://yoursite.com/asset/img/logo.png" />
+  <link href="/css/site.css" rel="stylesheet">
+  <script type="text/javascript" src="/js/jquery.min.js"></script>
+  <script type="text/javascript" src="/js/jquery.caption.min.js"></script>
+  <link href="/css/captionjs.min.css" rel="stylesheet"/>
+  <script type="text/javascript" src="/js/ewal.js"></script>
 
-	<link href="http://yoursite.com/atom.xml" title="Corner XX daily log" type="application/atom+xml" rel="alternative">
+  
 
-	<link rel="canonical" href="/2016/09/19/jvm-interpreter-3/index.html">
-
-	<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.19.3/css/semantic.min.css">
-	<link rel="stylesheet" href="/asset/css/style.css">
-
-	<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/0.19.3/javascript/semantic.min.js"></script>
 
 </head>
 
 <body>
+  
+
+<div class="navbar navbar-default navbar-static-top">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/"><span class="text-primary">Corner XX daily log</span></a>
+    </div>
+    <div class="collapse navbar-collapse navbar-right">
+      <ul class="nav navbar-nav">
+        
+          <li><a href="/">Home</a></li>
+        
+          <li><a href="/archives">Archives</a></li>
+        
+      </ul>
+      <ul class="nav navbar-nav pull-right">
+      
+      
+      
+      
+      </ul>
+    </div>
+  </div>
+</div>
 
 
-	<div class="layout-header">
-		<div class="ui fixed transparent inverted main menu panel-header">
-			<div class="container box-header">
-				<div class="title item header-item">
-					<a href="/" title="null">Corner XX daily log</a>
-				</div>
-			</div>
-		</div>
-	</div>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-8"><article class="post">
+  
+    <div class="post-date">
+      <time datetime="2016-09-19T06:43:37.000Z">2016-09-19</time>
+    </div>
+    
+  
+    <h1 class="title">JVM解释器初始化过程(三)</h1>
+  
 
-
-	<div class="layout-menu">
-
-		<nav class="ui transparent vertical inverted labeled icon menu">
-
-			<a class="item" href="/">
-				<i class="home icon"></i>
-				Home
-			</a>
-
-			<a class="item" href="/archives">
-				<i class="sitemap icon"></i>
-				Sitemap
-			</a>
-
-			<a class="item" href="/page/">
-				<i class="browser icon"></i>
-				Page
-			</a>
-
-		</nav>
-
-	</div>
-
-	<div class="layout-menu-footer">
-
-		<nav class="ui transparent inverted menu">
-
-			<a class="item" href="/">
-				<i class="home icon"></i>
-				Home
-			</a>
-
-			<a class="item" href="/archives">
-				<i class="sitemap icon"></i>
-				Sitemap
-			</a>
-
-			<a class="item" href="/page/">
-				<i class="browser icon"></i>
-				Page
-			</a>
-
-		</nav>
-
-	</div>
-
-
-
-	<div class="layout-content">
-
-
-		<div class="panel-content">
-			<div class="ui grid box-content">
-				<div class="two wide column">
-					&nbsp;
-				</div>
-
-				<div class="twelve wide column">
-
-					<div class="box-post-item">
-						<article class="post-item" itemscope itemtype="http://schema.org/Article">
-
-
-
-
-							<p class="content-meta">
-								<span class="meta-date" itemprop="datePublished" content="2016-09-19">2016-09-19</span>
-
-
-							</p>
-
-
-							<h2 class="box-content-title">
-								<a href="/2016/09/19/jvm-interpreter-3/"  itemprop="url"><span class="content-title" itemprop="name">JVM解释器初始化过程(三)</span></a>
-							</h2>
-
-							<div class="content post-item-content" itemprop="articleBody">
-
-<p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。文中接着上一张进行描述。<br><a id="more"></a></p>
+  
+  <div class="post-content">
+    
+      <p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。文中接着上一张进行描述。<br><a id="more"></a></p>
 <h1 id="JVM解释器初始化过程-三"><a href="#JVM解释器初始化过程-三" class="headerlink" title="JVM解释器初始化过程(三)"></a>JVM解释器初始化过程(三)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。</p>
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>文中介绍JVM中解释器初始化的过程，Java之所以是跨平台的，解释器隐藏了具体实现的负载过程。文中接着上一张进行描述。</p>
 <h2 id="解释器初始化"><a href="#解释器初始化" class="headerlink" title="解释器初始化"></a>解释器初始化</h2><p>先看看正常指令的生成过程，其中重要的是TosState：<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div></pre></td><td class="code"><pre><div class="line">hotspot\src\share\vm\interpreter\templateInterpreter.cpp:</div><div class="line"></div><div class="line"><span class="keyword">void</span> TemplateInterpreterGenerator::set_short_entry_points(Template* t, address&amp; bep, address&amp; cep, address&amp; sep, address&amp; aep, address&amp; iep, address&amp; lep, address&amp; fep, address&amp; dep, address&amp; vep) &#123;</div><div class="line">  assert(t-&gt;is_valid(), <span class="string">"template must exist"</span>);</div><div class="line">  <span class="keyword">switch</span> (t-&gt;tos_in()) &#123;</div><div class="line">    <span class="keyword">case</span> btos:</div><div class="line">    <span class="keyword">case</span> ztos:</div><div class="line">    <span class="keyword">case</span> ctos:</div><div class="line">    <span class="keyword">case</span> stos:</div><div class="line">      ShouldNotReachHere();  <span class="comment">// btos/ctos/stos should use itos.</span></div><div class="line">      <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">case</span> atos: vep = <span class="number">__</span> pc(); <span class="number">__</span> pop(atos); aep = <span class="number">__</span> pc(); generate_and_dispatch(t); <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">case</span> itos: vep = <span class="number">__</span> pc(); <span class="number">__</span> pop(itos); iep = <span class="number">__</span> pc(); generate_and_dispatch(t); <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">case</span> ltos: vep = <span class="number">__</span> pc(); <span class="number">__</span> pop(ltos); lep = <span class="number">__</span> pc(); generate_and_dispatch(t); <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">case</span> ftos: vep = <span class="number">__</span> pc(); <span class="number">__</span> pop(ftos); fep = <span class="number">__</span> pc(); generate_and_dispatch(t); <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">case</span> dtos: vep = <span class="number">__</span> pc(); <span class="number">__</span> pop(dtos); dep = <span class="number">__</span> pc(); generate_and_dispatch(t); <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">case</span> vtos: set_vtos_entry_points(t, bep, cep, sep, aep, iep, lep, fep, dep, vep);     <span class="keyword">break</span>;</div><div class="line">    <span class="keyword">default</span>  : ShouldNotReachHere();                                                 <span class="keyword">break</span>;</div><div class="line">  &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">void</span> TemplateInterpreterGenerator::generate_and_dispatch(Template* t, TosState tos_out) &#123;</div><div class="line">  <span class="keyword">if</span> (PrintBytecodeHistogram)                                    histogram_bytecode(t);</div><div class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> PRODUCT</span></div><div class="line">  <span class="comment">// debugging code</span></div><div class="line">  <span class="keyword">if</span> (CountBytecodes || TraceBytecodes || StopInterpreterAt &gt; <span class="number">0</span>) count_bytecode();</div><div class="line">  <span class="keyword">if</span> (PrintBytecodePairHistogram)                                histogram_bytecode_pair(t);</div><div class="line">  <span class="keyword">if</span> (TraceBytecodes)                                            trace_bytecode(t);</div><div class="line">  <span class="keyword">if</span> (StopInterpreterAt &gt; <span class="number">0</span>)                                     stop_interpreter_at();</div><div class="line">  <span class="number">__</span> verify_FPU(<span class="number">1</span>, t-&gt;tos_in());</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">// !PRODUCT</span></span></div><div class="line">  <span class="keyword">int</span> step;</div><div class="line">  <span class="keyword">if</span> (!t-&gt;does_dispatch()) &#123;</div><div class="line">    step = t-&gt;is_wide() ? Bytecodes::wide_length_for(t-&gt;bytecode()) : Bytecodes::length_for(t-&gt;bytecode());</div><div class="line">    <span class="keyword">if</span> (tos_out == ilgl) tos_out = t-&gt;tos_out();</div><div class="line">    <span class="comment">// compute bytecode size</span></div><div class="line">    assert(step &gt; <span class="number">0</span>, <span class="string">"just checkin'"</span>);</div><div class="line">    <span class="comment">// setup stuff for dispatching next bytecode</span></div><div class="line">    <span class="keyword">if</span> (ProfileInterpreter &amp;&amp; VerifyDataPointer</div><div class="line">        &amp;&amp; methodDataOopDesc::bytecode_has_profile(t-&gt;bytecode())) &#123;</div><div class="line">      <span class="number">__</span> verify_method_data_pointer();</div><div class="line">    &#125;</div><div class="line">    <span class="number">__</span> dispatch_prolog(tos_out, step);</div><div class="line">  &#125;</div><div class="line">  <span class="comment">// generate template</span></div><div class="line">  t-&gt;generate(<span class="number">_</span>masm);</div><div class="line">  <span class="comment">// advance</span></div><div class="line">  <span class="keyword">if</span> (t-&gt;does_dispatch()) &#123;</div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> ASSERT</span></div><div class="line">    <span class="comment">// make sure execution doesn't go beyond this point if code is broken</span></div><div class="line">    <span class="number">__</span> should_not_reach_here();</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">// ASSERT</span></span></div><div class="line">  &#125; <span class="keyword">else</span> &#123;</div><div class="line">    <span class="comment">// dispatch to next bytecode</span></div><div class="line">    <span class="number">__</span> dispatch_epilog(tos_out, step);</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
@@ -145,57 +104,118 @@
 <p>可以看出，这个指令并不会为对应的指令编号为nop生成计算机指令。这个指令的入参和出参数的TopState都是vtos。而且这个指令为正常指令，不是宽指令。所以生成解释器执行的是<strong>TemplateInterpreterGenerator::set_short_entry_points</strong>,我们来看看在linux_x86_64中运行时生成的计算机指令。至于怎么生成debug版本的jvm，请参考之前的文章：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line">[root@template linux_amd64_compiler2]# ./jvmg/hotspot -gdb</div><div class="line">GNU gdb (GDB) Red Hat Enterprise Linux (7.2-90.el6)</div><div class="line">Copyright (C) 2010 Free Software Foundation, Inc.</div><div class="line">License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;</div><div class="line">This is free software: you are free to change and redistribute it.</div><div class="line">There is NO WARRANTY, to the extent permitted by law.  Type &quot;show copying&quot;</div><div class="line">and &quot;show warranty&quot; for details.</div><div class="line">This GDB was configured as &quot;x86_64-redhat-linux-gnu&quot;.</div><div class="line">For bug reporting instructions, please see:</div><div class="line">&lt;http://www.gnu.org/software/gdb/bugs/&gt;.</div><div class="line">Breakpoint 1 at 0x404d98: file /opt/build/openjdk-jdk7u-jdk7u/hotspot/src/share/tools/launcher/java.c, line 1270.</div><div class="line">[Thread debugging using libthread_db enabled]</div><div class="line">Using java runtime at: /opt/jdk1.7.0_80/jre</div><div class="line">[New Thread 0x7ffff6b34700 (LWP 13466)]</div><div class="line">[Switching to Thread 0x7ffff6b34700 (LWP 13466)]</div><div class="line">(gdb) b universe2_init</div><div class="line">Breakpoint 2 at 0x7ffff77062f2: file /opt/build/openjdk-jdk7u-jdk7u/hotspot/src/share/vm/memory/universe.cpp, line 1045.</div><div class="line">(gdb) print/x TemplateInterpreter::_normal_table._table[8][0]</div><div class="line">$5 = 0x7fffed02ae20</div><div class="line">(gdb) x/20i 0x7fffed02ae20</div><div class="line">   0x7fffed02ae20:	push   %rax                  &lt;--- aep</div><div class="line">   0x7fffed02ae21:	jmpq   0x7fffed02ae50</div><div class="line">   0x7fffed02ae26:	sub    $0x8,%rsp             &lt;--- fep</div><div class="line">   0x7fffed02ae2a:	movss  %xmm0,(%rsp)</div><div class="line">   0x7fffed02ae2f:	jmpq   0x7fffed02ae50</div><div class="line">   0x7fffed02ae34:	sub    $0x10,%rsp            &lt;--- dep</div><div class="line">   0x7fffed02ae38:	movsd  %xmm0,(%rsp)</div><div class="line">   0x7fffed02ae3d:	jmpq   0x7fffed02ae50</div><div class="line">   0x7fffed02ae42:	sub    $0x10,%rsp            &lt;--- lep          </div><div class="line">   0x7fffed02ae46:	mov    %rax,(%rsp)</div><div class="line">   0x7fffed02ae4a:	jmpq   0x7fffed02ae50</div><div class="line">   0x7fffed02ae4f:	push   %rax                  &lt;--- iep  </div><div class="line">   0x7fffed02ae50:	movzbl 0x1(%r13),%ebx        &lt;--- vep  </div><div class="line">   0x7fffed02ae55:	inc    %r13</div><div class="line">   0x7fffed02ae58:	movabs $0x7ffff7fd5de0,%r10</div><div class="line">   0x7fffed02ae62:	jmpq   *(%r10,%rbx,8)</div><div class="line">   0x7fffed02ae66:	nop</div><div class="line">   0x7fffed02ae67:	nop</div></pre></td></tr></table></figure></p>
 <p>以入参<strong>TopState</strong>类型为<strong>vtos</strong>生成的计算机指令和我们之前描述的是一致的，这里nop的入参是<strong>vtos</strong>,这样在执行的时候，虚拟机直接以<strong>vtos</strong>类型为标，找到TemplateInterpreter::_normal_table[0][0]，而这里这个调转表指向的是内存地址为<strong>0x7fffed02ae50</strong>,至于后面的代码则是加载下一条指令，递增指令寄存器r13,执行下一条指令。</p>
 
+    
+  </div>
+  
+    
 
-							</div>
+    
+  
+  <div class="tags">
+    <a href="/tags/JVM/">JVM</a>
+  </div>
+
+  
+  <div class="addthis_toolbox addthis_default_style 
+addthis_32x32_style" data-addthis-url="http://yoursite.com/2016/09/19/jvm-interpreter-3/" data-addthis-title="JVM解释器初始化过程(三)">
+<a class="addthis_button_preferred_1"></a>
+<a class="addthis_button_preferred_2"></a>
+<a class="addthis_button_preferred_3"></a>
+<a class="addthis_button_preferred_4"></a>
+<a class="addthis_button_compact"></a>
+<a class="addthis_counter addthis_bubble_style"></a>
+</div>
+  
+    <ul class="next_prev">
+      
+        <li class="prev">
+        <a class="btn btn-success" role="button" href="/2016/09/19/jvm-interpreter-1/">
+          Vorheriger Beitrag
+        </a></li>
+      
+      
+        <li class="next">
+        <a class="btn btn-success" role="button" href="/2016/09/19/jvm-interpreter-2/">
+          Nächster Beitrag
+        </a></li>
+      
+    </ul>
+  
+  
+
+</article></div>
+      <div class="col-md-offset-1 col-md-3"><div class="sidebar-nav">
+
+  <div class="widget">
+  	  <form action=""
+    method="get"
+    data-action="https://google.com.br/search?q=site:yoursite.com"
+    accept-charset="utf-8"
+    data-js="google-search-form">
+  <div class="input-group">
+    <input class="form-control" type="search" name="q" results="0" placeholder="Suche in Beiträgen" data-js="google-search-input" style="padding-left: 0; padding-right: 0">
+    <span class="input-group-btn">
+      <button class="btn btn-default" type="submit">
+        <span class="glyphicon glyphicon-search"></span> 
+      </button>
+    </span>
+  </div>
+</form>
+  </div>
+
+  <div class="widget">
+  	
+
+  </div>
+
+  <div class="widget">
+  	
+<h3 class="title">Tags</h3>
+<div class="well" style="line-height:14pt">
+
+  
+  <a style="font-size: 142%" href="/tags/JVM/">JVM</a>
+  
+
+</div>
 
 
-							<div class="content-tag">
+  </div>
 
-<a class="tag-link" href="/tags/JVM/">JVM</a>
+  <div class="widget">
+  	
+<h3>Tags</h3>
+<ul class="list-group">
 
-							</div>
+  
+  <li class="list-group-item">
+    <span class="badge">7</span>
+    <a href="/tags/JVM/">JVM</a>
+  </li>
+  
 
-
-
-						</article>
-					</div>
-				</div>
-
-				<div class="two wide column">
-					&nbsp;
-				</div>
-
-			</div>
-
-			<div class="panel-post-nav">
-				<div class="box-post-nav">
-		
-
-					<a href="/2016/09/19/jvm-interpreter-2/" title="JVM解释器初始化过程(二)">&larr; Prev</a>
+</ul>
 
 
+  </div>
 
-					<a href="/2016/09/19/jvm-interpreter-1/" title="JVM解释器初始化(一)">Next &rarr;</a>
+</div>
+</div>
+    </div>
+  </div>
+  <div id="push"></div>
+  <div class="navbar navbar-footer">
+  <div class="container">
+    <p class="navbar-center navbar-text">
+      
+      &copy; 2016 Corner XX
+      
+    </p>
+  </div>
+</div>
+  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0-wip/js/bootstrap.min.js"></script>
 
 
-				</div>
-			</div>
-		</div>
-
-
-	</div>
-
-	<div class="layout-footer" style="clear: both">
-		<div class="panel-footer">
-			<div class="box-footer">
-				<footer class="footer">
-					<p class="cr">&copy; 2016 <a href="https://github.com/foreachsam/"  target="_blank">Corner XX</a> </p>
-
-					<span class="theme">Powered: <a href="http://hexo.io/" target="_blank">Hexo</a>, Theme: <a href="https://github.com/foreachsam/hexo-theme-aiki" target="_blank">Aiki</a></span>
-				</footer>
-			</div>
-		</div>
-	</div>
 
 
 
