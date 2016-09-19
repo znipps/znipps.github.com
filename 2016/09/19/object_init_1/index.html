@@ -6,22 +6,16 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <title>Object 初始化过程(一) | Corner XX daily log</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="Object 初始化过程(一)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。
-前言Object类初始化前必须完成JVM规范中的加载，链接等。
-执行过程分析在执行初始化的过程中，在内存中表示的instanceKlass都已经建立好了映射关系，instanceKlass已经建立好了相关的数据和控制结构，供运行时使用。在初始化之前，解释器会验证类是否已经链">
+  <meta name="description" content="Object类初始化前必须完成JVM规范中的加载，链接等。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Object 初始化过程(一)">
 <meta property="og:url" content="http://yoursite.com/2016/09/19/object_init_1/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
-<meta property="og:description" content="Object 初始化过程(一)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。
-前言Object类初始化前必须完成JVM规范中的加载，链接等。
-执行过程分析在执行初始化的过程中，在内存中表示的instanceKlass都已经建立好了映射关系，instanceKlass已经建立好了相关的数据和控制结构，供运行时使用。在初始化之前，解释器会验证类是否已经链">
-<meta property="og:updated_time" content="2016-09-19T09:05:00.295Z">
+<meta property="og:description" content="Object类初始化前必须完成JVM规范中的加载，链接等。">
+<meta property="og:updated_time" content="2016-09-19T09:08:23.080Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Object 初始化过程(一)">
-<meta name="twitter:description" content="Object 初始化过程(一)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。
-前言Object类初始化前必须完成JVM规范中的加载，链接等。
-执行过程分析在执行初始化的过程中，在内存中表示的instanceKlass都已经建立好了映射关系，instanceKlass已经建立好了相关的数据和控制结构，供运行时使用。在初始化之前，解释器会验证类是否已经链">
+<meta name="twitter:description" content="Object类初始化前必须完成JVM规范中的加载，链接等。">
   
     <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
   
@@ -161,7 +155,8 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="Object-初始化过程-一"><a href="#Object-初始化过程-一" class="headerlink" title="Object 初始化过程(一)"></a>Object 初始化过程(一)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。</p>
+        <p>Object类初始化前必须完成JVM规范中的加载，链接等。<br><a id="more"></a></p>
+<h1 id="Object-初始化过程-一"><a href="#Object-初始化过程-一" class="headerlink" title="Object 初始化过程(一)"></a>Object 初始化过程(一)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。</p>
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Object类初始化前必须完成JVM规范中的加载，链接等。</p>
 <h2 id="执行过程分析"><a href="#执行过程分析" class="headerlink" title="执行过程分析"></a>执行过程分析</h2><p>在执行初始化的过程中，在内存中表示的<strong>instanceKlass</strong>都已经建立好了映射关系，<strong>instanceKlass</strong>已经建立好了相关的数据和控制结构，供运行时使用。在初始化之前，解释器会验证类是否已经链接，保证符合JVM规范。<br>在初始过程中实现的代码逻辑复杂，一段段来看:<br><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">hotspot\src\share\vm\runtime\thread.cpp:</div><div class="line"></div><div class="line">// See "The Virtual Machine Specification" section 2.16.5 for a detailed explanation of the class initialization</div><div class="line">// process. The step comments refers to the procedure described in that section.</div><div class="line">// Note: implementation moved to static method to expose the this pointer.</div><div class="line">void instanceKlass::initialize(TRAPS) &#123;</div><div class="line">  if (this-&gt;should_be_initialized()) &#123;</div><div class="line">    HandleMark hm(THREAD);</div><div class="line">    instanceKlassHandle this_oop(THREAD, this-&gt;as_klassOop());</div><div class="line">    initialize_impl(this_oop, CHECK);</div><div class="line">    // Note: at this point the class may be initialized</div><div class="line">    //       OR it may be in the state of being initialized</div><div class="line">    //       in case of recursive initialization!</div><div class="line">  &#125; else &#123;</div><div class="line">    assert(is_initialized(), "sanity check");</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
 <p>每一个类或接口都会有一个初始化锁，加载和初始化过程中需要特别注意多线程加载导致的并发问题，在执行初始化过程同样如此，所以首先需要获取初始化锁。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">hotspot\src\share\vm\oops\instanceKlass.cpp：</div><div class="line"></div><div class="line"><span class="keyword">void</span> instanceKlass::initialize_impl(instanceKlassHandle this_oop, TRAPS) &#123;</div><div class="line">  <span class="comment">// Make sure klass is linked (verified) before initialization</span></div><div class="line">  <span class="comment">// A class could already be verified, since it has been reflected upon.</span></div><div class="line">  this_oop-&gt;link_class(CHECK);</div><div class="line"></div><div class="line">  DTRACE_CLASSINIT_PROBE(required, instanceKlass::cast(this_oop()), <span class="number">-1</span>);</div></pre></td></tr></table></figure></p>

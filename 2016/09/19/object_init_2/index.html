@@ -6,22 +6,16 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <title>Object 初始化过程(二) | Corner XX daily log</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="Object 初始化过程(二)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。
-前言上一章描述了初始化的第一部分，由于篇幅的问题，我将其分成了第二部分，第二部分在第一部分的基础上继续描述了初始化的过程。主要描述的调用解释器执行字节码之前JVM需要做的一些准备工作。
-执行Java方法所有的准备工作已经做好，下面开始进行调用Java方法了，在这里调用的是\">
+  <meta name="description" content="上一章描述了初始化的第一部分，由于篇幅的问题，我将其分成了第二部分，第二部分在第一部分的基础上继续描述了初始化的过程。主要描述的调用解释器执行字节码之前JVM需要做的一些准备工作">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Object 初始化过程(二)">
 <meta property="og:url" content="http://yoursite.com/2016/09/19/object_init_2/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
-<meta property="og:description" content="Object 初始化过程(二)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。
-前言上一章描述了初始化的第一部分，由于篇幅的问题，我将其分成了第二部分，第二部分在第一部分的基础上继续描述了初始化的过程。主要描述的调用解释器执行字节码之前JVM需要做的一些准备工作。
-执行Java方法所有的准备工作已经做好，下面开始进行调用Java方法了，在这里调用的是\">
-<meta property="og:updated_time" content="2016-09-19T09:05:07.832Z">
+<meta property="og:description" content="上一章描述了初始化的第一部分，由于篇幅的问题，我将其分成了第二部分，第二部分在第一部分的基础上继续描述了初始化的过程。主要描述的调用解释器执行字节码之前JVM需要做的一些准备工作">
+<meta property="og:updated_time" content="2016-09-19T09:08:05.557Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Object 初始化过程(二)">
-<meta name="twitter:description" content="Object 初始化过程(二)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。
-前言上一章描述了初始化的第一部分，由于篇幅的问题，我将其分成了第二部分，第二部分在第一部分的基础上继续描述了初始化的过程。主要描述的调用解释器执行字节码之前JVM需要做的一些准备工作。
-执行Java方法所有的准备工作已经做好，下面开始进行调用Java方法了，在这里调用的是\">
+<meta name="twitter:description" content="上一章描述了初始化的第一部分，由于篇幅的问题，我将其分成了第二部分，第二部分在第一部分的基础上继续描述了初始化的过程。主要描述的调用解释器执行字节码之前JVM需要做的一些准备工作">
   
     <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
   
@@ -161,7 +155,8 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="Object-初始化过程-二"><a href="#Object-初始化过程-二" class="headerlink" title="Object 初始化过程(二)"></a>Object 初始化过程(二)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。</p>
+        <p>上一章描述了初始化的第一部分，由于篇幅的问题，我将其分成了第二部分，第二部分在第一部分的基础上继续描述了初始化的过程。<br>主要描述的调用解释器执行字节码之前JVM需要做的一些准备工作<br><a id="more"></a></p>
+<h1 id="Object-初始化过程-二"><a href="#Object-初始化过程-二" class="headerlink" title="Object 初始化过程(二)"></a>Object 初始化过程(二)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。</p>
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>上一章描述了初始化的第一部分，由于篇幅的问题，我将其分成了第二部分，第二部分在第一部分的基础上继续描述了初始化的过程。<br>主要描述的调用解释器执行字节码之前JVM需要做的一些准备工作。</p>
 <h2 id="执行Java方法"><a href="#执行Java方法" class="headerlink" title="执行Java方法"></a>执行Java方法</h2><p>所有的准备工作已经做好，下面开始进行调用Java方法了，在这里调用的是<strong>\<clinit\></clinit\></strong>。在这里使用的是一个叫<strong>StubRoutines</strong>的机制。调用的是<strong>StubRoutines::call_stub()</strong>。看看它的定义：<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">static</span> CallStub <span class="title">call_stub</span><span class="params">()</span>                              </span>&#123; <span class="keyword">return</span> CAST_TO_FN_PTR(CallStub, <span class="number">_</span>call_stub_entry); &#125;</div></pre></td></tr></table></figure></p>
 <p>也就是说调用的是<strong>_call_stub_entry</strong>，而这个函数的初始化则在：<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">hotspot\src\cpu\x86\vm\stubGenerator_x86_64.cpp:</div><div class="line"></div><div class="line">    StubRoutines::<span class="number">_</span>call_stub_entry =</div><div class="line">      generate_call_stub(StubRoutines::<span class="number">_</span>call_stub_return_address);</div></pre></td></tr></table></figure></p>

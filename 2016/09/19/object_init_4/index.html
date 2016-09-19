@@ -6,22 +6,16 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <title>Object 初始化过程(四) | Corner XX daily log</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="Object 初始化过程(四)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。
-前言Object类初始化前必须完成JVM规范中的加载，链接等。本节继续Object初始化过程(三)继续。
-执行过程分析在前面，我们已经建立运行Java方法的执行栈，下面就描述了加载jvm指令，到jvm指令的执行过程。1234">
+  <meta name="description" content="Object类初始化前必须完成JVM规范中的加载，链接等。本节继续Object初始化过程(三)继续。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Object 初始化过程(四)">
 <meta property="og:url" content="http://yoursite.com/2016/09/19/object_init_4/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
-<meta property="og:description" content="Object 初始化过程(四)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。
-前言Object类初始化前必须完成JVM规范中的加载，链接等。本节继续Object初始化过程(三)继续。
-执行过程分析在前面，我们已经建立运行Java方法的执行栈，下面就描述了加载jvm指令，到jvm指令的执行过程。1234">
-<meta property="og:updated_time" content="2016-09-19T09:05:17.869Z">
+<meta property="og:description" content="Object类初始化前必须完成JVM规范中的加载，链接等。本节继续Object初始化过程(三)继续。">
+<meta property="og:updated_time" content="2016-09-19T09:08:12.728Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Object 初始化过程(四)">
-<meta name="twitter:description" content="Object 初始化过程(四)备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。
-前言Object类初始化前必须完成JVM规范中的加载，链接等。本节继续Object初始化过程(三)继续。
-执行过程分析在前面，我们已经建立运行Java方法的执行栈，下面就描述了加载jvm指令，到jvm指令的执行过程。1234">
+<meta name="twitter:description" content="Object类初始化前必须完成JVM规范中的加载，链接等。本节继续Object初始化过程(三)继续。">
   
     <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
   
@@ -161,7 +155,8 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="Object-初始化过程-四"><a href="#Object-初始化过程-四" class="headerlink" title="Object 初始化过程(四)"></a>Object 初始化过程(四)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。</p>
+        <p>Object类初始化前必须完成JVM规范中的加载，链接等。本节继续<strong>Object初始化过程(三)</strong>继续。<br><a id="more"></a></p>
+<h1 id="Object-初始化过程-四"><a href="#Object-初始化过程-四" class="headerlink" title="Object 初始化过程(四)"></a>Object 初始化过程(四)</h1><p>备注：文章中所有的平台都是在Linux上，Windows不做考虑。文中只是部分，后续慢慢更新。文中描述的只涉及相关的知识，不包含特定领域的内容。</p>
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Object类初始化前必须完成JVM规范中的加载，链接等。本节继续<strong>Object初始化过程(三)</strong>继续。</p>
 <h2 id="执行过程分析"><a href="#执行过程分析" class="headerlink" title="执行过程分析"></a>执行过程分析</h2><p>在前面，我们已经建立运行Java方法的执行栈，下面就描述了加载jvm指令，到jvm指令的执行过程。<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">hotspot\src\cpu\x86\vm\interp_masm_x86_64.cpp:</div><div class="line"></div><div class="line"><span class="keyword">void</span> InterpreterMacroAssembler::dispatch_next(TosState state, <span class="keyword">int</span> step) &#123;</div><div class="line">  <span class="comment">// load next bytecode (load before advancing r13 to prevent AGI)</span></div><div class="line">  load_unsigned_byte(rbx, Address(r13, step));</div><div class="line">  <span class="comment">// advance r13</span></div><div class="line">  increment(r13, step);</div><div class="line">  dispatch_base(state, Interpreter::dispatch_table(state));</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
 <p>在<strong>Object初始化过程(三)</strong>中我们知道<strong>r13</strong>寄存器保存了jvm代码段的内存地址。此方法通过访问<strong>r13</strong>寄存器的内容并且将其赋值给<strong>rbx</strong>,并且递增内存地址。<strong>rbx</strong>寄存器保存了jvm的指令。<br>那么TosState表示的是什么意思呢？<strong>MARK</strong><br>这里的TosState是<strong>vtos</strong>。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">void InterpreterMacroAssembler::dispatch_base(TosState state,</div><div class="line">                                              address* table,</div><div class="line">                                              bool verifyoop) &#123;</div><div class="line">  verify_FPU(1, state);</div><div class="line">  if (VerifyActivationFrameSize) &#123;</div><div class="line">    Label L;</div><div class="line">    mov(rcx, rbp);</div><div class="line">    subptr(rcx, rsp);</div><div class="line">    int32_t min_frame_size =</div><div class="line">      (frame::link_offset - frame::interpreter_frame_initial_sp_offset) *</div><div class="line">      wordSize;</div><div class="line">    cmpptr(rcx, (int32_t)min_frame_size);</div><div class="line">    jcc(Assembler::greaterEqual, L);</div><div class="line">    stop(&quot;broken stack frame&quot;);</div><div class="line">    bind(L);</div><div class="line">  &#125;</div><div class="line">  if (verifyoop) &#123;</div><div class="line">    verify_oop(rax, state);</div><div class="line">  &#125;</div><div class="line">  lea(rscratch1, ExternalAddress((address)table));</div><div class="line">  jmp(Address(rscratch1, rbx, Address::times_8));</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
