@@ -12,7 +12,7 @@
 <meta property="og:url" content="http://yoursite.com/2016/09/19/object_init_3/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
 <meta property="og:description" content="上一章描述了初始化的第一部分，第二部分，第三部分在第一，二部分的基础上继续描述了初始化的过程。主要描述的是调用解释器执行Java字节码的过程。">
-<meta property="og:updated_time" content="2016-09-20T01:14:37.297Z">
+<meta property="og:updated_time" content="2016-09-21T00:51:21.257Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Object 初始化过程(三)">
 <meta name="twitter:description" content="上一章描述了初始化的第一部分，第二部分，第三部分在第一，二部分的基础上继续描述了初始化的过程。主要描述的是调用解释器执行Java字节码的过程。">
@@ -156,6 +156,8 @@
 <p>我们重点看一下<strong>constant pool cache</strong>的计算方式：<br><figure class="highlight c++"><table><tr><td class="code"><pre><div class="line"><span class="number">__</span> movptr(rdx, Address(rbx, methodOopDesc::const_offset()));</div><div class="line"><span class="number">__</span> movptr(rdx, Address(rdx, constMethodOopDesc::constants_offset()));</div><div class="line"><span class="number">__</span> movptr(rdx, Address(rdx, constantPoolOopDesc::cache_offset_in_bytes()));</div></pre></td></tr></table></figure></p>
 <p><strong>MARK</strong></p>
 <p>此时，<strong>r13</strong>寄存器指向方法描述中的Code属性，通过访问r13就可以知道当前需要执行的jvm指令。</p>
+<p>另外，看看此时调用前夕，各个寄存器的内容：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">```asm</div><div class="line">RAX:   return adress</div><div class="line">RBX:   methodOop</div><div class="line">RCX    size of parameters</div><div class="line">RDX:   constant pool cache</div><div class="line">r14:   pointer to locals,指向参数的起始地址</div><div class="line">r13:   bcp JVM字节码的起始地址</div></pre></td></tr></table></figure></p>
+<p>```</p>
 
       
     </div>

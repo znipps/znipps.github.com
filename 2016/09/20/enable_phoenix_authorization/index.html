@@ -12,7 +12,7 @@
 <meta property="og:url" content="http://yoursite.com/2016/09/20/enable_phoenix_authorization/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
 <meta property="og:description" content="文中描述如何开启Phoenix的权限功能，让Phoneix提供受权限保护的访问功能。">
-<meta property="og:updated_time" content="2016-09-20T07:56:07.016Z">
+<meta property="og:updated_time" content="2016-09-20T08:00:32.503Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="开启Phoenix访问权限功能">
 <meta name="twitter:description" content="文中描述如何开启Phoenix的权限功能，让Phoneix提供受权限保护的访问功能。">
@@ -148,7 +148,7 @@
       
         <p>文中描述如何开启Phoenix的权限功能，让Phoneix提供受权限保护的访问功能。</p>
 <a id="more"></a>
-<h2 id="开启Hbase访问权限功能"><a href="#开启Hbase访问权限功能" class="headerlink" title="开启Hbase访问权限功能"></a>开启Hbase访问权限功能</h2><p>Phoenix系列的文章记录了自己维护公司数据平台阅读源码，遇到的问题以及相关的知识，以防止忘记了，在此做一个记录。</p>
+<h2 id="开启Phoenix访问权限功能"><a href="#开启Phoenix访问权限功能" class="headerlink" title="开启Phoenix访问权限功能"></a>开启Phoenix访问权限功能</h2><p>Phoenix系列的文章记录了自己维护公司数据平台阅读源码，遇到的问题以及相关的知识，以防止忘记了，在此做一个记录。</p>
 <h2 id="描述"><a href="#描述" class="headerlink" title="描述"></a>描述</h2><p>在维护Phoenix系统的过程中，随着平台日益扩大，各部分都需要访问Hbase集群，这样就这涉及到了认证安全等领域的问题，为每一个访问Phoenix的成员或角色必不可少，减少使用过程的坑爹事情。Hbase提供了简单的认证功能，提供一般的访问权限控制功能，由于我们使用的是CDH 5.5.1,所以下面描述的都是再次平台上操作的过程。</p>
 <h2 id="Phoenix-访问权限"><a href="#Phoenix-访问权限" class="headerlink" title="Phoenix 访问权限"></a>Phoenix 访问权限</h2><p>我们利用了Hbase的访问权限控制功能，如不了解请参考<a href="/2016/09/20/enable_hbase_authorization/">开启Hbase访问权限功能</a></p>
 <h2 id="Hbase配置"><a href="#Hbase配置" class="headerlink" title="Hbase配置"></a>Hbase配置</h2><p>由于Phoenix使用的使用会默认通过创建系统表来获取表信息，所以需要赋予系统表读和创建的权限：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">hbase&gt;grant &apos;root&apos;, &apos;RC&apos;, &apos;SYSTEM.CATALOG&apos;</div><div class="line">hbase&gt;grant &apos;root&apos;, &apos;RC&apos;, &apos;SYSTEM.SEQUENCE&apos;</div><div class="line">hbase&gt;grant &apos;root&apos;, &apos;RC&apos;, &apos;SYSTEM.STATS&apos;</div><div class="line">hbase&gt;grant &apos;root&apos;, &apos;RC&apos;, &apos;SYSTEM.FUNCTION&apos;</div></pre></td></tr></table></figure></p>
