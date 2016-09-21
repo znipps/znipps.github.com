@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>JVM基础设施之ResourceMark | Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="这篇介绍Java虚拟机中叫ResourceMark的基础设施，ResourceMark为C++中的方法调用提供了便利，ResourceMark基本用在方法调用的第一行，ResourceMark为方法调用的资源管理提供了便利，通过ResourceMark管理的资源在方法调用结束会自动释放程序占用的内存空间。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JVM基础设施之ResourceMark">
+<meta property="og:url" content="http://yoursite.com/2016/09/21/jvm-resouce-mark/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="这篇介绍Java虚拟机中叫ResourceMark的基础设施，ResourceMark为C++中的方法调用提供了便利，ResourceMark基本用在方法调用的第一行，ResourceMark为方法调用的资源管理提供了便利，通过ResourceMark管理的资源在方法调用结束会自动释放程序占用的内存空间。">
+<meta property="og:updated_time" content="2016-09-21T05:37:57.946Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="JVM基础设施之ResourceMark">
+<meta name="twitter:description" content="这篇介绍Java虚拟机中叫ResourceMark的基础设施，ResourceMark为C++中的方法调用提供了便利，ResourceMark基本用在方法调用的第一行，ResourceMark为方法调用的资源管理提供了便利，通过ResourceMark管理的资源在方法调用结束会自动释放程序占用的内存空间。">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="#" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="#" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-jvm-resouce-mark" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      JVM基础设施之ResourceMark
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>这篇介绍Java虚拟机中叫ResourceMark的基础设施，ResourceMark为C++中的方法调用提供了便利，ResourceMark基本用在方法调用的第一行，ResourceMark为方法调用的资源管理提供了便利，通过ResourceMark管理的资源在方法调用结束会自动释放程序占用的内存空间。<br><a id="more"></a></p>
+<h1 id="JVM基础设施之ResourceMark"><a href="#JVM基础设施之ResourceMark" class="headerlink" title="JVM基础设施之ResourceMark"></a>JVM基础设施之ResourceMark</h1><p>这个系列文章介绍JVM提供的基础设置，提供了各类帮助工具。</p>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>这篇介绍Java虚拟机中叫ResourceMark的基础设施，ResourceMark为C++中的方法调用提供了便利，ResourceMark基本用在方法调用的第一行，ResourceMark为方法调用的资源管理提供了便利，通过ResourceMark管理的资源在方法调用结束会自动释放程序占用的内存空间。</p>
+<h2 id="结构"><a href="#结构" class="headerlink" title="结构"></a>结构</h2><p>先来看看ResouceMark的定义：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="comment">//------------------------------ResourceMark-----------------------------------</span></div><div class="line"><span class="comment">// A resource mark releases all resources allocated after it was constructed</span></div><div class="line"><span class="comment">// when the destructor is called.  Typically used as a local variable.</span></div><div class="line"><span class="keyword">class</span> ResourceMark: <span class="keyword">public</span> StackObj &#123;</div><div class="line"><span class="keyword">protected</span>:</div><div class="line">  ResourceArea *<span class="number">_</span>area;          <span class="comment">// Resource area to stack allocate</span></div><div class="line">  Chunk *<span class="number">_</span>chunk;                <span class="comment">// saved arena chunk</span></div><div class="line">  <span class="keyword">char</span> *<span class="number">_</span>hwm, *<span class="number">_</span>max;</div><div class="line">  <span class="keyword">size_t</span> <span class="number">_</span>size_in_bytes;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">void</span> <span class="title">initialize</span><span class="params">(Thread *thread)</span> </span>&#123;</div><div class="line">    <span class="number">_</span>area = thread-&gt;resource_area();</div><div class="line">    <span class="number">_</span>chunk = <span class="number">_</span>area-&gt;<span class="number">_</span>chunk;</div><div class="line">    <span class="number">_</span>hwm = <span class="number">_</span>area-&gt;<span class="number">_</span>hwm;</div><div class="line">    <span class="number">_</span>max= <span class="number">_</span>area-&gt;<span class="number">_</span>max;</div><div class="line">    <span class="number">_</span>size_in_bytes = <span class="number">_</span>area-&gt;size_in_bytes();</div><div class="line">    debug_only(<span class="number">_</span>area-&gt;<span class="number">_</span>nesting++;)</div><div class="line">    assert( <span class="number">_</span>area-&gt;<span class="number">_</span>nesting &gt; <span class="number">0</span>, <span class="string">"must stack allocate RMs"</span> );</div><div class="line">  &#125;</div><div class="line"> <span class="keyword">public</span>:</div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> ASSERT</span></div><div class="line">  ResourceMark(Thread *thread) &#123;</div><div class="line">    assert(thread == Thread::current(), <span class="string">"not the current thread"</span>);</div><div class="line">    initialize(thread);</div><div class="line">  &#125;</div><div class="line"><span class="meta">#<span class="meta-keyword">else</span></span></div><div class="line">  ResourceMark(Thread *thread);</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">// ASSERT</span></span></div><div class="line"></div><div class="line">  ResourceMark()               &#123; initialize(Thread::current()); &#125;</div><div class="line"></div><div class="line">  ResourceMark( ResourceArea *r ) :</div><div class="line">    <span class="number">_</span>area(r), <span class="number">_</span>chunk(r-&gt;<span class="number">_</span>chunk), <span class="number">_</span>hwm(r-&gt;<span class="number">_</span>hwm), <span class="number">_</span>max(r-&gt;<span class="number">_</span>max) &#123;</div><div class="line">    <span class="number">_</span>size_in_bytes = r-&gt;<span class="number">_</span>size_in_bytes;</div><div class="line">    debug_only(<span class="number">_</span>area-&gt;<span class="number">_</span>nesting++;)</div><div class="line">    assert( <span class="number">_</span>area-&gt;<span class="number">_</span>nesting &gt; <span class="number">0</span>, <span class="string">"must stack allocate RMs"</span> );</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">void</span> <span class="title">reset_to_mark</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">if</span> (UseMallocOnly) free_malloced_objects();</div><div class="line"></div><div class="line">    <span class="keyword">if</span>( <span class="number">_</span>chunk-&gt;next() ) &#123;       <span class="comment">// Delete later chunks</span></div><div class="line">      <span class="comment">// reset arena size before delete chunks. Otherwise, the total</span></div><div class="line">      <span class="comment">// arena size could exceed total chunk size</span></div><div class="line">      assert(<span class="number">_</span>area-&gt;size_in_bytes() &gt; size_in_bytes(), <span class="string">"Sanity check"</span>);</div><div class="line">      <span class="number">_</span>area-&gt;set_size_in_bytes(size_in_bytes());</div><div class="line">      <span class="number">_</span>chunk-&gt;next_chop();</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">      assert(<span class="number">_</span>area-&gt;size_in_bytes() == size_in_bytes(), <span class="string">"Sanity check"</span>);</div><div class="line">    &#125;</div><div class="line">    <span class="number">_</span>area-&gt;<span class="number">_</span>chunk = <span class="number">_</span>chunk;     <span class="comment">// Roll back arena to saved chunk</span></div><div class="line">    <span class="number">_</span>area-&gt;<span class="number">_</span>hwm = <span class="number">_</span>hwm;</div><div class="line">    <span class="number">_</span>area-&gt;<span class="number">_</span>max = <span class="number">_</span>max;</div><div class="line"></div><div class="line">    <span class="comment">// clear out this chunk (to detect allocation bugs)</span></div><div class="line">    <span class="keyword">if</span> (ZapResourceArea) <span class="built_in">memset</span>(<span class="number">_</span>hwm, badResourceValue, <span class="number">_</span>max - <span class="number">_</span>hwm);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  ~ResourceMark() &#123;</div><div class="line">    assert( <span class="number">_</span>area-&gt;<span class="number">_</span>nesting &gt; <span class="number">0</span>, <span class="string">"must stack allocate RMs"</span> );</div><div class="line">    debug_only(<span class="number">_</span>area-&gt;<span class="number">_</span>nesting--;)</div><div class="line">    reset_to_mark();</div><div class="line">  &#125;</div><div class="line"></div><div class="line"></div><div class="line"> <span class="keyword">private</span>:</div><div class="line">  <span class="function"><span class="keyword">void</span> <span class="title">free_malloced_objects</span><span class="params">()</span>                                         PRODUCT_RETURN</span>;</div><div class="line">  <span class="keyword">size_t</span> size_in_bytes() &#123; <span class="keyword">return</span> <span class="number">_</span>size_in_bytes; &#125;</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<h2 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h2><p>虚拟机的方法调用中会涉及到线程申请局部内存，虚拟机为每一个线程维护了一个叫<strong>资源区</strong>概念的内存空间。<br>ResouceMark在构造的时候会记录在调用时刻的内存使用情况，方法结束的时候，通过调用析构函数将记录的内存回复，这样在这个调用过程在<strong>资源区</strong>分配的内存都被回收了。</p>
+<p>先来看看<strong>资源区</strong>的结构：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\memory\allocation.hpp:</div><div class="line"></div><div class="line">//------------------------------Arena------------------------------------------</div><div class="line">// Fast allocation of memory</div><div class="line">class Arena : public CHeapObj&lt;mtNone|otArena&gt; &#123;</div><div class="line">protected:</div><div class="line">  friend class ResourceMark;</div><div class="line">  friend class HandleMark;</div><div class="line">  friend class NoHandleMark;</div><div class="line">  friend class VMStructs;</div><div class="line"></div><div class="line">  Chunk *_first;                // First chunk</div><div class="line">  Chunk *_chunk;                // current chunk</div><div class="line">  char *_hwm, *_max;            // High water mark and max in current chunk</div><div class="line">  size_t _size_in_bytes;        // Size of arena (used for native memory tracking)</div><div class="line"></div><div class="line">  // Get a new Chunk of at least size x</div><div class="line">  void* grow(size_t x, AllocFailType alloc_failmode = AllocFailStrategy::EXIT_OOM);</div><div class="line">  NOT_PRODUCT(static julong _bytes_allocated;) // total #bytes allocated since start</div><div class="line">  friend class AllocStats;</div><div class="line">  debug_only(void* malloc(size_t size);)</div><div class="line">  debug_only(void* internal_malloc_4(size_t x);)</div><div class="line">  NOT_PRODUCT(void inc_bytes_allocated(size_t x);)</div><div class="line"></div><div class="line">  void signal_out_of_memory(size_t request, const char* whence) const;</div><div class="line"></div><div class="line">  bool check_for_overflow(size_t request, const char* whence,</div><div class="line">      AllocFailType alloc_failmode = AllocFailStrategy::EXIT_OOM) const &#123;</div><div class="line">    if (UINTPTR_MAX - request &lt; (uintptr_t)_hwm) &#123;</div><div class="line">      if (alloc_failmode == AllocFailStrategy::RETURN_NULL) &#123;</div><div class="line">        return false;</div><div class="line">      &#125;</div><div class="line">      signal_out_of_memory(request, whence);</div><div class="line">    &#125;</div><div class="line">    return true;</div><div class="line"> &#125;</div><div class="line"></div><div class="line"> public:</div><div class="line">  Arena();</div><div class="line">  Arena(size_t init_size);</div><div class="line">  ~Arena();</div><div class="line">  void  destruct_contents();</div><div class="line">  char* hwm() const             &#123; return _hwm; &#125;</div><div class="line"></div><div class="line">  // new operators</div><div class="line">  void* operator new (size_t size);</div><div class="line">  void* operator new (size_t size, const std::nothrow_t&amp; nothrow_constant);</div><div class="line"></div><div class="line">  // dynamic memory type tagging</div><div class="line">  void* operator new(size_t size, MEMFLAGS flags);</div><div class="line">  void* operator new(size_t size, const std::nothrow_t&amp; nothrow_constant, MEMFLAGS flags);</div><div class="line">  void  operator delete(void* p);</div><div class="line"></div><div class="line">  // Fast allocate in the arena.  Common case is: pointer test + increment.</div><div class="line">  void* Amalloc(size_t x, AllocFailType alloc_failmode = AllocFailStrategy::EXIT_OOM) &#123;</div><div class="line">    assert(is_power_of_2(ARENA_AMALLOC_ALIGNMENT) , &quot;should be a power of 2&quot;);</div><div class="line">    x = ARENA_ALIGN(x);</div><div class="line">    debug_only(if (UseMallocOnly) return malloc(x);)</div><div class="line">    if (!check_for_overflow(x, &quot;Arena::Amalloc&quot;, alloc_failmode))</div><div class="line">      return NULL;</div><div class="line">    NOT_PRODUCT(inc_bytes_allocated(x);)</div><div class="line">    if (_hwm + x &gt; _max) &#123;</div><div class="line">      return grow(x, alloc_failmode);</div><div class="line">    &#125; else &#123;</div><div class="line">      char *old = _hwm;</div><div class="line">      _hwm += x;</div><div class="line">      return old;</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line">  // Further assume size is padded out to words</div><div class="line">  void *Amalloc_4(size_t x, AllocFailType alloc_failmode = AllocFailStrategy::EXIT_OOM) &#123;</div><div class="line">    assert( (x&amp;(sizeof(char*)-1)) == 0, &quot;misaligned size&quot; );</div><div class="line">    debug_only(if (UseMallocOnly) return malloc(x);)</div><div class="line">    if (!check_for_overflow(x, &quot;Arena::Amalloc_4&quot;, alloc_failmode))</div><div class="line">      return NULL;</div><div class="line">    NOT_PRODUCT(inc_bytes_allocated(x);)</div><div class="line">    if (_hwm + x &gt; _max) &#123;</div><div class="line">      return grow(x, alloc_failmode);</div><div class="line">    &#125; else &#123;</div><div class="line">      char *old = _hwm;</div><div class="line">      _hwm += x;</div><div class="line">      return old;</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  // Allocate with &apos;double&apos; alignment. It is 8 bytes on sparc.</div><div class="line">  // In other cases Amalloc_D() should be the same as Amalloc_4().</div><div class="line">  void* Amalloc_D(size_t x, AllocFailType alloc_failmode = AllocFailStrategy::EXIT_OOM) &#123;</div><div class="line">    assert( (x&amp;(sizeof(char*)-1)) == 0, &quot;misaligned size&quot; );</div><div class="line">    debug_only(if (UseMallocOnly) return malloc(x);)</div><div class="line">#if defined(SPARC) &amp;&amp; !defined(_LP64)</div><div class="line">#define DALIGN_M1 7</div><div class="line">    size_t delta = (((size_t)_hwm + DALIGN_M1) &amp; ~DALIGN_M1) - (size_t)_hwm;</div><div class="line">    x += delta;</div><div class="line">#endif</div><div class="line">    if (!check_for_overflow(x, &quot;Arena::Amalloc_D&quot;, alloc_failmode))</div><div class="line">      return NULL;</div><div class="line">    NOT_PRODUCT(inc_bytes_allocated(x);)</div><div class="line">    if (_hwm + x &gt; _max) &#123;</div><div class="line">      return grow(x, alloc_failmode); // grow() returns a result aligned &gt;= 8 bytes.</div><div class="line">    &#125; else &#123;</div><div class="line">      char *old = _hwm;</div><div class="line">      _hwm += x;</div><div class="line">#if defined(SPARC) &amp;&amp; !defined(_LP64)</div><div class="line">      old += delta; // align to 8-bytes</div><div class="line">#endif</div><div class="line">      return old;</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  // Fast delete in area.  Common case is: NOP (except for storage reclaimed)</div><div class="line">  void Afree(void *ptr, size_t size) &#123;</div><div class="line">#ifdef ASSERT</div><div class="line">    if (ZapResourceArea) memset(ptr, badResourceValue, size); // zap freed memory</div><div class="line">    if (UseMallocOnly) return;</div><div class="line">#endif</div><div class="line">    if (((char*)ptr) + size == _hwm) _hwm = (char*)ptr;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  void *Arealloc( void *old_ptr, size_t old_size, size_t new_size,</div><div class="line">     AllocFailType alloc_failmode = AllocFailStrategy::EXIT_OOM);</div><div class="line"></div><div class="line">  // Move contents of this arena into an empty arena</div><div class="line">  Arena *move_contents(Arena *empty_arena);</div><div class="line"></div><div class="line">  // Determine if pointer belongs to this Arena or not.</div><div class="line">  bool contains( const void *ptr ) const;</div><div class="line"></div><div class="line">  // Total of all chunks in use (not thread-safe)</div><div class="line">  size_t used() const;</div><div class="line"></div><div class="line">  // Total # of bytes used</div><div class="line">  size_t size_in_bytes() const         &#123;  return _size_in_bytes; &#125;;</div><div class="line">  void set_size_in_bytes(size_t size);</div><div class="line"></div><div class="line">  static void free_malloced_objects(Chunk* chunk, char* hwm, char* max, char* hwm2)  PRODUCT_RETURN;</div><div class="line">  static void free_all(char** start, char** end)                                     PRODUCT_RETURN;</div><div class="line"></div><div class="line">  // how many arena instances</div><div class="line">  NOT_PRODUCT(static volatile jint _instance_count;)</div><div class="line">private:</div><div class="line">  // Reset this Arena to empty, access will trigger grow if necessary</div><div class="line">  void   reset(void) &#123;</div><div class="line">    _first = _chunk = NULL;</div><div class="line">    _hwm = _max = NULL;</div><div class="line">    set_size_in_bytes(0);</div><div class="line">  &#125;</div><div class="line">&#125;;</div><div class="line"></div><div class="line">hotspot\src\share\vm\memory\resourceArea.hpp:</div><div class="line"></div><div class="line">// A ResourceArea is an Arena that supports safe usage of ResourceMark.</div><div class="line">class ResourceArea: public Arena &#123;</div><div class="line">  friend class ResourceMark;</div><div class="line">  friend class DeoptResourceMark;</div><div class="line">  friend class VMStructs;</div><div class="line">  debug_only(int _nesting;)             // current # of nested ResourceMarks</div><div class="line">  debug_only(static int _warned;)       // to suppress multiple warnings</div><div class="line"></div><div class="line">public:</div><div class="line">  ResourceArea() &#123;</div><div class="line">    debug_only(_nesting = 0;)</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  ResourceArea(size_t init_size) : Arena(init_size) &#123;</div><div class="line">    debug_only(_nesting = 0;);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  char* allocate_bytes(size_t size, AllocFailType alloc_failmode = AllocFailStrategy::EXIT_OOM) &#123;</div><div class="line">#ifdef ASSERT</div><div class="line">    if (_nesting &lt; 1 &amp;&amp; !_warned++)</div><div class="line">      fatal(&quot;memory leak: allocating without ResourceMark&quot;);</div><div class="line">    if (UseMallocOnly) &#123;</div><div class="line">      // use malloc, but save pointer in res. area for later freeing</div><div class="line">      char** save = (char**)internal_malloc_4(sizeof(char*));</div><div class="line">      return (*save = (char*)os::malloc(size, mtThread));</div><div class="line">    &#125;</div><div class="line">#endif</div><div class="line">    return (char*)Amalloc(size, alloc_failmode);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  debug_only(int nesting() const &#123; return _nesting; &#125;);</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/21/jvm-resouce-mark/" class="archive-article-date">
+  	<time datetime="2016-09-21T05:22:20.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/Java/">Java</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2016/09/21/jvm-memory-allocate/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          JVM 基础设施之内存分配
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2016/09/21/universe-genesis-1/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">JVM Class 内存结构初始化</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="jvm-resouce-mark" data-title="JVM基础设施之ResourceMark" data-url="http://yoursite.com/2016/09/21/jvm-resouce-mark/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2016 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 15px;">Hbase</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 10px;">Kernel</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>
