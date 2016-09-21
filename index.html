@@ -126,7 +126,7 @@
       <div class="body-wrap">
         
   
-    <article id="post-jvm-memory-allocate" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-jvm-resouce-mark" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <input type="hidden" class="isFancy" />
@@ -136,7 +136,7 @@
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/21/jvm-memory-allocate/">JVM 基础设施之内存分配</a>
+      <a class="article-title" href="/2016/09/21/jvm-resouce-mark/">JVM基础设施之ResourceMark</a>
     </h1>
   
 
@@ -144,16 +144,16 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>这篇文章介绍JVM中的内存分配，包括ResourceObj,CHeapObj,StackObj,ValueObj以及AllStatic。这些表明不同的角色，分别用在不同的场景。虚拟机提供了方便以及明确的内存分配定义。JVM还提供了很多工具，简化了内存分配的复杂性，提供模块化的内存分配功能。<br>
+        <p>这篇介绍Java虚拟机中叫ResourceMark的基础设施，ResourceMark为C++中的方法调用提供了便利，ResourceMark基本用在方法调用的第一行，ResourceMark为方法调用的资源管理提供了便利，通过ResourceMark管理的资源在方法调用结束会自动释放程序占用的内存空间。<br>
         <p class="article-more-link">
-          <a  href="/2016/09/21/jvm-memory-allocate/#more">more >></a>
+          <a  href="/2016/09/21/jvm-resouce-mark/#more">more >></a>
         </p>
       
     </div>
     <div class="article-info article-info-index">
       
-      <a href="/2016/09/21/jvm-memory-allocate/" class="archive-article-date">
-  	<time datetime="2016-09-21T05:36:41.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
+      <a href="/2016/09/21/jvm-resouce-mark/" class="archive-article-date">
+  	<time datetime="2016-09-21T08:22:20.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
 </a>
       
 	<div class="article-tag tagcloud">
@@ -183,7 +183,7 @@
 
 
   
-    <article id="post-jvm-resouce-mark" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-jvm-memory-allocate" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <input type="hidden" class="isFancy" />
@@ -193,7 +193,7 @@
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/21/jvm-resouce-mark/">JVM基础设施之ResourceMark</a>
+      <a class="article-title" href="/2016/09/21/jvm-memory-allocate/">JVM 基础设施之内存分配</a>
     </h1>
   
 
@@ -201,16 +201,16 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>这篇介绍Java虚拟机中叫ResourceMark的基础设施，ResourceMark为C++中的方法调用提供了便利，ResourceMark基本用在方法调用的第一行，ResourceMark为方法调用的资源管理提供了便利，通过ResourceMark管理的资源在方法调用结束会自动释放程序占用的内存空间。<br>
+        <p>这篇文章介绍JVM中的内存分配，包括ResourceObj,CHeapObj,StackObj,ValueObj以及AllStatic。这些表明不同的角色，分别用在不同的场景。虚拟机提供了方便以及明确的内存分配定义。JVM还提供了很多工具，简化了内存分配的复杂性，提供模块化的内存分配功能。<br>
         <p class="article-more-link">
-          <a  href="/2016/09/21/jvm-resouce-mark/#more">more >></a>
+          <a  href="/2016/09/21/jvm-memory-allocate/#more">more >></a>
         </p>
       
     </div>
     <div class="article-info article-info-index">
       
-      <a href="/2016/09/21/jvm-resouce-mark/" class="archive-article-date">
-  	<time datetime="2016-09-21T05:22:20.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
+      <a href="/2016/09/21/jvm-memory-allocate/" class="archive-article-date">
+  	<time datetime="2016-09-21T05:36:41.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
 </a>
       
 	<div class="article-tag tagcloud">
