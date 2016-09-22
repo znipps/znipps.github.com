@@ -4,14 +4,21 @@
   <meta charset="utf-8">
   
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
-  <title>Corner XX daily log</title>
+  <title>Linux 启动过程笔记(一) | Corner XX daily log</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Corner XX daily log">
-<meta property="og:url" content="http://yoursite.com/index.html">
+  <meta name="description" content="Linux 启动过程笔记(一)这个笔记是Linux 启动过程笔记系列的第一篇文章，是记录自己看Linux内核过程中的笔记，主要攻克以intel x86_64处理器为主的记录，其他处理器不做考虑。在此讨论的都是bzImage的结构。
+起始自己发现在学习一些东西的过程中，没有记录的习惯，导致随着时间的过去，无法存档，反而一遍遍温习自己学过的内容，但是有没有记录的地方，导致每一次都是从新再来。所以感觉">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux 启动过程笔记(一)">
+<meta property="og:url" content="http://yoursite.com/2016/09/21/linux-boot-1/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="Linux 启动过程笔记(一)这个笔记是Linux 启动过程笔记系列的第一篇文章，是记录自己看Linux内核过程中的笔记，主要攻克以intel x86_64处理器为主的记录，其他处理器不做考虑。在此讨论的都是bzImage的结构。
+起始自己发现在学习一些东西的过程中，没有记录的习惯，导致随着时间的过去，无法存档，反而一遍遍温习自己学过的内容，但是有没有记录的地方，导致每一次都是从新再来。所以感觉">
+<meta property="og:updated_time" content="2016-09-21T13:08:33.219Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Corner XX daily log">
+<meta name="twitter:title" content="Linux 启动过程笔记(一)">
+<meta name="twitter:description" content="Linux 启动过程笔记(一)这个笔记是Linux 启动过程笔记系列的第一篇文章，是记录自己看Linux内核过程中的笔记，主要攻克以intel x86_64处理器为主的记录，其他处理器不做考虑。在此讨论的都是bzImage的结构。
+起始自己发现在学习一些东西的过程中，没有记录的习惯，导致随着时间的过去，无法存档，反而一遍遍温习自己学过的内容，但是有没有记录的地方，导致每一次都是从新再来。所以感觉">
   
     <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
   
@@ -124,9 +131,7 @@
 </nav>
 
       <div class="body-wrap">
-        
-  
-    <article id="post-linux-boot-2" class="article article-type-post" itemscope itemprop="blogPost">
+        <article id="post-linux-boot-1" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <input type="hidden" class="isFancy" />
@@ -135,68 +140,8 @@
       <header class="article-header">
         
   
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/21/linux-boot-2/">Linux 启动过程笔记(一)</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <a id="more"></a>
-<h2 id="Linux-启动过程笔记-一"><a href="#Linux-启动过程笔记-一" class="headerlink" title="Linux 启动过程笔记(一)"></a>Linux 启动过程笔记(一)</h2><p>这个笔记是Linux 启动过程笔记系列的第一篇文章，是记录自己看Linux内核过程中的笔记，主要攻克以intel x86_64处理器为主的记录，其他处理器不做考虑。在此讨论的都是bzImage的结构。</p>
-<h2 id="起始"><a href="#起始" class="headerlink" title="起始"></a>起始</h2><p>自己发现在学习一些东西的过程中，没有记录的习惯，导致随着时间的过去，无法存档，反而一遍遍温习自己学过的内容，但是有没有记录的地方，导致每一次都是从新再来。所以感觉有一个良好的记录习惯还是很重要的。个人对kernel，jvm和大数据平台有点兴趣，特此在此做一个笔记，让以后自己也可以温习一下，这个系列的主要讲自己在阅读Linux kernel启动过程中阅读笔记。</p>
-<p>Linux kernel的目录结构就不描述了，有兴趣的可以参考其他文档。</p>
-<h2 id="电脑启动的一些知识"><a href="#电脑启动的一些知识" class="headerlink" title="电脑启动的一些知识"></a>电脑启动的一些知识</h2><p>我也不是硬件专业的，所以描述的有点笼统，这都不是重点，不是吗，毕竟我主要关心的是软件，哈哈！<br>电脑在加电自检后，BIOS也进入了工作，做了一些基本的工作，提供了一些初始化的工作，检测各个硬件，准备一些配置信息，BIOS的开发也是很重要的工作。<br>当前的计算机基本上都是硬盘结构的，计算机经过BIOS的引导后，开始加载第一个磁盘第一个扇区（硬盘的0柱面、0磁头、1扇区），这个扇区中存储的是计算机的引导代码，在linux中，我采用的是grub，第一个512字节很重要，基本上这个损坏了，那么你的电脑估计也就报废了，通过第一个扇区引导出了后续的动作，才能有了我们后面记录的内容。<br>通常第一个引导扇区叫做mbr(主引导记录)，这段程序也很简单，根据配置加载第二个引导装载程序，这个引导程序更加重要，提供了基本的文件管理工作。通常引导程序加载操作系统程序，然后把控制权交给操作系统。<br>由于我主要关注的kernel启动的过程，先不聊引导程序的细节了。</p>
-<p>有时间还是需要把引导程序grub也看看。之前只是大概浏览一下，现在只要知道grub引导了操作系统，x84_64系统并且将操作系统加载到0x100000的位置。</p>
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/21/linux-boot-2/" class="archive-article-date">
-  	<time datetime="2016-09-21T11:24:25.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Kernel/">Kernel</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Linux/">Linux</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
-    <article id="post-linux-boot-1" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/21/linux-boot-1/">Linux 启动过程笔记(一)</a>
+    <h1 class="article-title" itemprop="name">
+      Linux 启动过程笔记(一)
     </h1>
   
 
@@ -242,468 +187,73 @@
   </div>
 </article>
 
-
-
-
-
-
-
-
-
-
   
-    <article id="post-jvm-resouce-mark" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
+<nav id="article-nav">
+  
+    <a href="/2016/09/21/linux-boot-2/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
         
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/21/jvm-resouce-mark/">JVM基础设施之ResourceMark</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>这篇介绍Java虚拟机中叫ResourceMark的基础设施，ResourceMark为C++中的方法调用提供了便利，ResourceMark基本用在方法调用的第一行，ResourceMark为方法调用的资源管理提供了便利，通过ResourceMark管理的资源在方法调用结束会自动释放程序占用的内存空间。<br>
-        <p class="article-more-link">
-          <a  href="/2016/09/21/jvm-resouce-mark/#more">more >></a>
-        </p>
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/21/jvm-resouce-mark/" class="archive-article-date">
-  	<time datetime="2016-09-21T08:22:20.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Java/">Java</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
-    <article id="post-jvm-memory-allocate" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
+          Linux 启动过程笔记(一)
         
+      </div>
+    </a>
   
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/21/jvm-memory-allocate/">JVM 基础设施之内存分配</a>
-    </h1>
   
+    <a href="/2016/09/21/jvm-resouce-mark/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">JVM基础设施之ResourceMark</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
 
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>这篇文章介绍JVM中的内存分配，包括ResourceObj,CHeapObj,StackObj,ValueObj以及AllStatic。这些表明不同的角色，分别用在不同的场景。虚拟机提供了方便以及明确的内存分配定义。JVM还提供了很多工具，简化了内存分配的复杂性，提供模块化的内存分配功能。<br>
-        <p class="article-more-link">
-          <a  href="/2016/09/21/jvm-memory-allocate/#more">more >></a>
-        </p>
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/21/jvm-memory-allocate/" class="archive-article-date">
-  	<time datetime="2016-09-21T05:36:41.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
 	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
 
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Java/">Java</a>
-	</div>
 
 
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
 
 
 
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="linux-boot-1" data-title="Linux 启动过程笔记(一)" data-url="http://yoursite.com/2016/09/21/linux-boot-1/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
 
 
 
-
-
-
-
-  
-    <article id="post-universe-genesis-1" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/21/universe-genesis-1/">JVM Class 内存结构初始化</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <a id="more"></a>
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/21/universe-genesis-1/" class="archive-article-date">
-  	<time datetime="2016-09-21T02:52:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/JAVA/">JAVA</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
-    <article id="post-enable_phoenix_authorization" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/20/enable_phoenix_authorization/">开启Phoenix访问权限功能</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>文中描述如何开启Phoenix的权限功能，让Phoneix提供受权限保护的访问功能。</p>
-        <p class="article-more-link">
-          <a  href="/2016/09/20/enable_phoenix_authorization/#more">more >></a>
-        </p>
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/20/enable_phoenix_authorization/" class="archive-article-date">
-  	<time datetime="2016-09-20T07:56:37.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hbase/">Hbase</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Hbase/">Hbase</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
-    <article id="post-enable_hbase_authorization" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/20/enable_hbase_authorization/">开启Hbase访问权限功能</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>文中描述如何开启Hbase的权限功能，提供类Linux文件权限的访问风格。</p>
-        <p class="article-more-link">
-          <a  href="/2016/09/20/enable_hbase_authorization/#more">more >></a>
-        </p>
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/20/enable_hbase_authorization/" class="archive-article-date">
-  	<time datetime="2016-09-20T07:23:37.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hbase/">Hbase</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Hbase/">Hbase</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
-    <article id="post-yarn-main" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/20/yarn-main/">yarn_main</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>啥也没有，哈哈！</p>
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/20/yarn-main/" class="archive-article-date">
-  	<time datetime="2016-09-20T00:47:43.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hadoop-Yran/">Hadoop Yran</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Yran/">Yran</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
-    <article id="post-hdfs-main" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/20/hdfs-main/">hdfs_main</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>啥也没有，哈哈！ </p>
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/20/hdfs-main/" class="archive-article-date">
-  	<time datetime="2016-09-20T00:47:34.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hadoop-Hdfs/">Hadoop Hdfs</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Hdfs/">Hdfs</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
-    <article id="post-hbase-main" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/20/hbase-main/">hbase_main</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>啥也没有，哈哈！</p>
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/20/hbase-main/" class="archive-article-date">
-  	<time datetime="2016-09-20T00:47:23.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hbase/">Hbase</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Hbase/">Hbase</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
-  
-    <nav id="page-nav">
-      <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/">Next &raquo;</a>
-    </nav>
-  
 
 
       </div>
@@ -725,8 +275,8 @@
 		fancybox: true,
 		mathjax: true,
 		animate: true,
-		isHome: true,
-		isPost: false,
+		isHome: false,
+		isPost: true,
 		isArchive: false,
 		isTag: false,
 		isCategory: false,
