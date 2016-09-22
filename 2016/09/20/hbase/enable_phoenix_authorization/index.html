@@ -4,14 +4,18 @@
   <meta charset="utf-8">
   
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
-  <title>Category: Java | Corner XX daily log</title>
+  <title>开启Phoenix访问权限功能 | Corner XX daily log</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Corner XX daily log">
-<meta property="og:url" content="http://yoursite.com/categories/Java/index.html">
+  <meta name="description" content="文中描述如何开启Phoenix的权限功能，让Phoneix提供受权限保护的访问功能。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="开启Phoenix访问权限功能">
+<meta property="og:url" content="http://yoursite.com/2016/09/20/hbase/enable_phoenix_authorization/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="文中描述如何开启Phoenix的权限功能，让Phoneix提供受权限保护的访问功能。">
+<meta property="og:updated_time" content="2016-09-20T08:00:32.503Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Corner XX daily log">
+<meta name="twitter:title" content="开启Phoenix访问权限功能">
+<meta name="twitter:description" content="文中描述如何开启Phoenix的权限功能，让Phoneix提供受权限保护的访问功能。">
   
     <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
   
@@ -124,96 +128,124 @@
 </nav>
 
       <div class="body-wrap">
+        <article id="post-hbase/enable_phoenix_authorization" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
         
   
-  
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2016" class="archive-year">2016</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2016/09/21/jvm-resouce-mark/" class="archive-article-date">
-  	<time datetime="2016-09-21T08:22:20.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2016/09/21/jvm-resouce-mark/">JVM基础设施之ResourceMark</a>
+    <h1 class="article-title" itemprop="name">
+      开启Phoenix访问权限功能
     </h1>
   
 
-        <div class="article-info info-on-right">
-          
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
-	</div>
-
-          
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Java/">Java</a>
-	</div>
-
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
+      </header>
     
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2016/09/21/jvm-memory-allocate/" class="archive-article-date">
-  	<time datetime="2016-09-21T05:36:41.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>文中描述如何开启Phoenix的权限功能，让Phoneix提供受权限保护的访问功能。</p>
+<a id="more"></a>
+<h2 id="开启Phoenix访问权限功能"><a href="#开启Phoenix访问权限功能" class="headerlink" title="开启Phoenix访问权限功能"></a>开启Phoenix访问权限功能</h2><p>Phoenix系列的文章记录了自己维护公司数据平台阅读源码，遇到的问题以及相关的知识，以防止忘记了，在此做一个记录。</p>
+<h2 id="描述"><a href="#描述" class="headerlink" title="描述"></a>描述</h2><p>在维护Phoenix系统的过程中，随着平台日益扩大，各部分都需要访问Hbase集群，这样就这涉及到了认证安全等领域的问题，为每一个访问Phoenix的成员或角色必不可少，减少使用过程的坑爹事情。Hbase提供了简单的认证功能，提供一般的访问权限控制功能，由于我们使用的是CDH 5.5.1,所以下面描述的都是再次平台上操作的过程。</p>
+<h2 id="Phoenix-访问权限"><a href="#Phoenix-访问权限" class="headerlink" title="Phoenix 访问权限"></a>Phoenix 访问权限</h2><p>我们利用了Hbase的访问权限控制功能，如不了解请参考<a href="/2016/09/20/enable_hbase_authorization/">开启Hbase访问权限功能</a></p>
+<h2 id="Hbase配置"><a href="#Hbase配置" class="headerlink" title="Hbase配置"></a>Hbase配置</h2><p>由于Phoenix使用的使用会默认通过创建系统表来获取表信息，所以需要赋予系统表读和创建的权限：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">hbase&gt;grant &apos;root&apos;, &apos;RC&apos;, &apos;SYSTEM.CATALOG&apos;</div><div class="line">hbase&gt;grant &apos;root&apos;, &apos;RC&apos;, &apos;SYSTEM.SEQUENCE&apos;</div><div class="line">hbase&gt;grant &apos;root&apos;, &apos;RC&apos;, &apos;SYSTEM.STATS&apos;</div><div class="line">hbase&gt;grant &apos;root&apos;, &apos;RC&apos;, &apos;SYSTEM.FUNCTION&apos;</div></pre></td></tr></table></figure></p>
+<p>以后我们就可以按照Hbase中的权限赋予一样赋予权限了，如：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">grant &apos;root&apos;, &apos;R&apos;, &apos;test.test&apos;</div></pre></td></tr></table></figure></p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/20/hbase/enable_phoenix_authorization/" class="archive-article-date">
+  	<time datetime="2016-09-20T07:56:37.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
 </a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2016/09/21/jvm-memory-allocate/">JVM 基础设施之内存分配</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
+      
 	<div class="article-tag tagcloud">
 		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hbase/">Hbase</a></li></ul>
 	</div>
 
-          
+      
 	<div class="article-category tagcloud">
 	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Java/">Java</a>
+	<a class="article-category-link" href="/categories/Hbase/">Hbase</a>
 	</div>
 
 
-        </div>
-        <div class="clearfix"></div>
-    </header>
+      <div class="clearfix"></div>
+    </div>
   </div>
 </article>
-  
-  
-    </div></section>
-  
 
-    
+  
+<nav id="article-nav">
+  
+    <a href="/2016/09/21/universe-genesis-1/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          JVM Class 内存结构初始化
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2016/09/20/hbase/enable_hbase_authorization/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">开启Hbase访问权限功能</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="hbase/enable_phoenix_authorization" data-title="开启Phoenix访问权限功能" data-url="http://yoursite.com/2016/09/20/hbase/enable_phoenix_authorization/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
 
 
       </div>
@@ -236,10 +268,10 @@
 		mathjax: true,
 		animate: true,
 		isHome: false,
-		isPost: false,
+		isPost: true,
 		isArchive: false,
 		isTag: false,
-		isCategory: true,
+		isCategory: false,
 		open_in_new: false,
 		root: "/"
 	}
