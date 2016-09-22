@@ -4,18 +4,21 @@
   <meta charset="utf-8">
   
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
-  <title>hbase_main | Corner XX daily log</title>
+  <title>JVM之Klass结构介绍(一) | Corner XX daily log</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="啥也没有，哈哈！">
+  <meta name="description" content="概述我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。先来看看一张图，这张图描述了Klass的结构以及相互之间的关系。
+Klass结构">
 <meta property="og:type" content="article">
-<meta property="og:title" content="hbase_main">
-<meta property="og:url" content="http://yoursite.com/2016/09/20/hbase-main/index.html">
+<meta property="og:title" content="JVM之Klass结构介绍(一)">
+<meta property="og:url" content="http://yoursite.com/2016/09/21/klass-desc-1/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
-<meta property="og:description" content="啥也没有，哈哈！">
-<meta property="og:updated_time" content="2016-09-20T07:07:01.092Z">
+<meta property="og:description" content="概述我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。先来看看一张图，这张图描述了Klass的结构以及相互之间的关系。
+Klass结构">
+<meta property="og:updated_time" content="2016-09-22T01:46:45.983Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="hbase_main">
-<meta name="twitter:description" content="啥也没有，哈哈！">
+<meta name="twitter:title" content="JVM之Klass结构介绍(一)">
+<meta name="twitter:description" content="概述我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。先来看看一张图，这张图描述了Klass的结构以及相互之间的关系。
+Klass结构">
   
     <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
   
@@ -128,7 +131,7 @@
 </nav>
 
       <div class="body-wrap">
-        <article id="post-hbase-main" class="article article-type-post" itemscope itemprop="blogPost">
+        <article id="post-klass-desc-1" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <input type="hidden" class="isFancy" />
@@ -138,7 +141,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      hbase_main
+      JVM之Klass结构介绍(一)
     </h1>
   
 
@@ -146,25 +149,26 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>啥也没有，哈哈！</p>
-
+        <a id="more"></a>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？<br>这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。<br>先来看看一张图，这张图描述了Klass的结构以及相互之间的关系。</p>
+<h2 id="Klass结构"><a href="#Klass结构" class="headerlink" title="Klass结构"></a>Klass结构</h2>
       
     </div>
     <div class="article-info article-info-index">
       
-      <a href="/2016/09/20/hbase-main/" class="archive-article-date">
-  	<time datetime="2016-09-20T00:47:23.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
+      <a href="/2016/09/21/klass-desc-1/" class="archive-article-date">
+  	<time datetime="2016-09-21T02:52:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
 </a>
       
 	<div class="article-tag tagcloud">
 		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hbase/">Hbase</a></li></ul>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
 	</div>
 
       
 	<div class="article-category tagcloud">
 	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Hbase/">Hbase</a>
+	<a class="article-category-link" href="/categories/JAVA/">JAVA</a>
 	</div>
 
 
@@ -176,18 +180,18 @@
   
 <nav id="article-nav">
   
-    <a href="/2016/09/20/hdfs-main/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2016/09/21/universe-genesis-1/" id="article-nav-newer" class="article-nav-link-wrap">
       <i class="icon-circle-left"></i>
       <div class="article-nav-title">
         
-          hdfs_main
+          JVM Class 内存结构初始化
         
       </div>
     </a>
   
   
-    <a href="/2016/09/20/linux-kernel-main/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">linux_kernel_main</div>
+    <a href="/2016/09/20/phoenix-performance/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Phoenix优化总结</div>
       <i class="icon-circle-right"></i>
     </a>
   
@@ -221,7 +225,7 @@
 
 <div class="duoshuo">
 	<!-- 多说评论框 start -->
-	<div class="ds-thread" data-thread-key="hbase-main" data-title="hbase_main" data-url="http://yoursite.com/2016/09/20/hbase-main/"></div>
+	<div class="ds-thread" data-thread-key="klass-desc-1" data-title="JVM之Klass结构介绍(一)" data-url="http://yoursite.com/2016/09/21/klass-desc-1/"></div>
 	<!-- 多说评论框 end -->
 	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 	<script type="text/javascript">
