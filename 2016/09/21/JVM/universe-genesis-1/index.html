@@ -4,18 +4,15 @@
   <meta charset="utf-8">
   
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
-  <title>开启Hbase访问权限功能 | Corner XX daily log</title>
+  <title>JVM Class 内存结构初始化 | Corner XX daily log</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="文中描述如何开启Hbase的权限功能，提供类Linux文件权限的访问风格。">
-<meta property="og:type" content="article">
-<meta property="og:title" content="开启Hbase访问权限功能">
-<meta property="og:url" content="http://yoursite.com/2016/09/20/hbase/enable_hbase_authorization/index.html">
+  <meta property="og:type" content="article">
+<meta property="og:title" content="JVM Class 内存结构初始化">
+<meta property="og:url" content="http://yoursite.com/2016/09/21/JVM/universe-genesis-1/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
-<meta property="og:description" content="文中描述如何开启Hbase的权限功能，提供类Linux文件权限的访问风格。">
-<meta property="og:updated_time" content="2016-09-20T07:57:53.247Z">
+<meta property="og:updated_time" content="2016-09-21T02:53:49.122Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="开启Hbase访问权限功能">
-<meta name="twitter:description" content="文中描述如何开启Hbase的权限功能，提供类Linux文件权限的访问风格。">
+<meta name="twitter:title" content="JVM Class 内存结构初始化">
   
     <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
   
@@ -128,7 +125,7 @@
 </nav>
 
       <div class="body-wrap">
-        <article id="post-hbase/enable_hbase_authorization" class="article article-type-post" itemscope itemprop="blogPost">
+        <article id="post-JVM/universe-genesis-1" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <input type="hidden" class="isFancy" />
@@ -138,7 +135,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      开启Hbase访问权限功能
+      JVM Class 内存结构初始化
     </h1>
   
 
@@ -146,54 +143,24 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>文中描述如何开启Hbase的权限功能，提供类Linux文件权限的访问风格。</p>
-<a id="more"></a>
-<h2 id="开启Hbase访问权限功能"><a href="#开启Hbase访问权限功能" class="headerlink" title="开启Hbase访问权限功能"></a>开启Hbase访问权限功能</h2><p>Hbase系列的文章记录了自己维护公司数据平台阅读源码，遇到的问题以及相关的知识，以防止忘记了，在此做一个记录。</p>
-<h2 id="描述"><a href="#描述" class="headerlink" title="描述"></a>描述</h2><p>在维护Hbase系统的过程中，随着平台日益扩大，各部分都需要访问Hbase集群，这样就这涉及到了认证安全等领域的问题，为每一个访问Hbase的成员或角色必不可少，减少使用过程的坑爹事情。Hbase提供了简单的认证功能，提供一般的访问权限控制功能，由于我们使用的是CDH 5.5.1,所以下面描述的都是再次平台上操作的过程。</p>
-<h2 id="Hbase-访问权限"><a href="#Hbase-访问权限" class="headerlink" title="Hbase 访问权限"></a>Hbase 访问权限</h2><p>Hbase提供了类似Linux文件系统的访问权限控制，这些控制可以控制Hbase的各种角色，这些控制位包含：</p>
-<ol>
-<li>Read(R) 可读</li>
-<li>Write(W) 可写</li>
-<li>Execute(X) 可执行coprocessor</li>
-<li>Create(C) 创建表和删除表</li>
-<li>Admin(A) 管理，如果balance，assign region</li>
-</ol>
-<p>这些角色包含：</p>
-<ul>
-<li><strong>Superuser</strong>，可以执行任何操作，通过在hbase-stie.xml指定<strong>hbase.superuser</strong>属性</li>
-<li><strong>Global</strong></li>
-<li><strong>Namespace</strong></li>
-<li><strong>Table</strong></li>
-<li><strong>ColumnFamily</strong></li>
-<li><strong>Cell</strong></li>
-</ul>
-<h2 id="Hbase配置"><a href="#Hbase配置" class="headerlink" title="Hbase配置"></a>Hbase配置</h2><p>通过以下配置可以开启此功能：<br><figure class="highlight xml"><table><tr><td class="code"><pre><div class="line"><span class="tag">&lt;<span class="name">property</span>&gt;</span></div><div class="line">     <span class="tag">&lt;<span class="name">name</span>&gt;</span>hbase.security.authorization<span class="tag">&lt;/<span class="name">name</span>&gt;</span></div><div class="line">     <span class="tag">&lt;<span class="name">value</span>&gt;</span>true<span class="tag">&lt;/<span class="name">value</span>&gt;</span></div><div class="line"><span class="tag">&lt;/<span class="name">property</span>&gt;</span></div><div class="line"><span class="tag">&lt;<span class="name">property</span>&gt;</span></div><div class="line">  <span class="tag">&lt;<span class="name">name</span>&gt;</span>hbase.security.exec.permission.checks<span class="tag">&lt;/<span class="name">name</span>&gt;</span></div><div class="line">  <span class="tag">&lt;<span class="name">value</span>&gt;</span>true<span class="tag">&lt;/<span class="name">value</span>&gt;</span></div><div class="line"><span class="tag">&lt;/<span class="name">property</span>&gt;</span></div><div class="line"><span class="tag">&lt;<span class="name">property</span>&gt;</span></div><div class="line">     <span class="tag">&lt;<span class="name">name</span>&gt;</span>hbase.coprocessor.master.classes<span class="tag">&lt;/<span class="name">name</span>&gt;</span></div><div class="line">     <span class="tag">&lt;<span class="name">value</span>&gt;</span>org.apache.hadoop.hbase.security.access.AccessController<span class="tag">&lt;/<span class="name">value</span>&gt;</span></div><div class="line"><span class="tag">&lt;/<span class="name">property</span>&gt;</span></div><div class="line"><span class="tag">&lt;<span class="name">property</span>&gt;</span></div><div class="line">     <span class="tag">&lt;<span class="name">name</span>&gt;</span>hbase.coprocessor.region.classes<span class="tag">&lt;/<span class="name">name</span>&gt;</span></div><div class="line">     <span class="tag">&lt;<span class="name">value</span>&gt;</span>org.apache.hadoop.hbase.security.token.TokenProvider,org.apache.hadoop.hbase.security.access.AccessController<span class="tag">&lt;/<span class="name">value</span>&gt;</span></div><div class="line"><span class="tag">&lt;/<span class="name">property</span>&gt;</span></div></pre></td></tr></table></figure></p>
-<h2 id="为指定用户赋权限"><a href="#为指定用户赋权限" class="headerlink" title="为指定用户赋权限"></a>为指定用户赋权限</h2><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">hbase&gt;grant &lt;user&gt; &lt;permissions&gt; [ @&lt;namespace&gt; [ &lt;table&gt;[ &lt;column family&gt;[ &lt;column qualifier&gt; ] ] ] ]</div><div class="line"></div><div class="line">hbase&gt;revoke &lt;user&gt; &lt;permissions&gt; [ @&lt;namespace&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ] </div><div class="line"></div><div class="line">hbase&gt;user_permission &lt;table&gt;</div></pre></td></tr></table></figure>
-<ul>
-<li><p>permissions的取值：</p>
-<p> R:可读,如Get, Scan, Exists<br> W:可写，如Put, Delete, LockRow, UnlockRow, IncrementColumnValue, CheckAndDelete, CheckAndPut, Flush, Compact<br> X:可执行coprocessor<br> C:创建表和删除表，如Create, Alter, Drop<br> A:管理，如果balance，assign region，如Enable, Disable, Snapshot, Restore, Clone, Split, MajorCompact, Grant, Revoke, Shutdown</p>
-</li>
-</ul>
-<p>例子<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">hbase&gt;grant &apos;user1&apos;, &apos;RWC&apos;</div><div class="line">hbase&gt;grant &apos;user2&apos;, &apos;RW&apos;, &apos;tableA&apos;</div><div class="line">hbase&gt;grant &apos;user3&apos;, &apos;C&apos;, &apos;@my_namespace&apos;</div></pre></td></tr></table></figure></p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://www.cloudera.com/documentation/enterprise/5-7-x/topics/cdh_sg_hbase_authorization.html#concept_enm_hhx_yp" target="_blank" rel="external">Configuring Authorization</a></p>
-
+        <a id="more"></a>
       
     </div>
     <div class="article-info article-info-index">
       
-      <a href="/2016/09/20/hbase/enable_hbase_authorization/" class="archive-article-date">
-  	<time datetime="2016-09-20T07:23:37.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
+      <a href="/2016/09/21/JVM/universe-genesis-1/" class="archive-article-date">
+  	<time datetime="2016-09-21T02:52:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
 </a>
       
 	<div class="article-tag tagcloud">
 		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hbase/">Hbase</a></li></ul>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
 	</div>
 
       
 	<div class="article-category tagcloud">
 	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Hbase/">Hbase</a>
+	<a class="article-category-link" href="/categories/JAVA/">JAVA</a>
 	</div>
 
 
@@ -205,18 +172,18 @@
   
 <nav id="article-nav">
   
-    <a href="/2016/09/20/hbase/enable_phoenix_authorization/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2016/09/21/jvm-memory-allocate/" id="article-nav-newer" class="article-nav-link-wrap">
       <i class="icon-circle-left"></i>
       <div class="article-nav-title">
         
-          开启Phoenix访问权限功能
+          JVM 基础设施之内存分配
         
       </div>
     </a>
   
   
-    <a href="/2016/09/20/yarn-main/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">yarn_main</div>
+    <a href="/2016/09/21/JVM/klass-desc-1/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">JVM之Klass结构介绍(一)</div>
       <i class="icon-circle-right"></i>
     </a>
   
@@ -250,7 +217,7 @@
 
 <div class="duoshuo">
 	<!-- 多说评论框 start -->
-	<div class="ds-thread" data-thread-key="hbase/enable_hbase_authorization" data-title="开启Hbase访问权限功能" data-url="http://yoursite.com/2016/09/20/hbase/enable_hbase_authorization/"></div>
+	<div class="ds-thread" data-thread-key="JVM/universe-genesis-1" data-title="JVM Class 内存结构初始化" data-url="http://yoursite.com/2016/09/21/JVM/universe-genesis-1/"></div>
 	<!-- 多说评论框 end -->
 	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 	<script type="text/javascript">
