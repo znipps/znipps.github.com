@@ -126,66 +126,6 @@
       <div class="body-wrap">
         
   
-    <article id="post-linux-boot-2" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/21/linux-boot-2/">Linux 启动过程笔记(一)</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <a id="more"></a>
-<h2 id="Linux-启动过程笔记-一"><a href="#Linux-启动过程笔记-一" class="headerlink" title="Linux 启动过程笔记(一)"></a>Linux 启动过程笔记(一)</h2><p>这个笔记是Linux 启动过程笔记系列的第一篇文章，是记录自己看Linux内核过程中的笔记，主要攻克以intel x86_64处理器为主的记录，其他处理器不做考虑。在此讨论的都是bzImage的结构。</p>
-<h2 id="起始"><a href="#起始" class="headerlink" title="起始"></a>起始</h2><p>自己发现在学习一些东西的过程中，没有记录的习惯，导致随着时间的过去，无法存档，反而一遍遍温习自己学过的内容，但是有没有记录的地方，导致每一次都是从新再来。所以感觉有一个良好的记录习惯还是很重要的。个人对kernel，jvm和大数据平台有点兴趣，特此在此做一个笔记，让以后自己也可以温习一下，这个系列的主要讲自己在阅读Linux kernel启动过程中阅读笔记。</p>
-<p>Linux kernel的目录结构就不描述了，有兴趣的可以参考其他文档。</p>
-<h2 id="电脑启动的一些知识"><a href="#电脑启动的一些知识" class="headerlink" title="电脑启动的一些知识"></a>电脑启动的一些知识</h2><p>我也不是硬件专业的，所以描述的有点笼统，这都不是重点，不是吗，毕竟我主要关心的是软件，哈哈！<br>电脑在加电自检后，BIOS也进入了工作，做了一些基本的工作，提供了一些初始化的工作，检测各个硬件，准备一些配置信息，BIOS的开发也是很重要的工作。<br>当前的计算机基本上都是硬盘结构的，计算机经过BIOS的引导后，开始加载第一个磁盘第一个扇区（硬盘的0柱面、0磁头、1扇区），这个扇区中存储的是计算机的引导代码，在linux中，我采用的是grub，第一个512字节很重要，基本上这个损坏了，那么你的电脑估计也就报废了，通过第一个扇区引导出了后续的动作，才能有了我们后面记录的内容。<br>通常第一个引导扇区叫做mbr(主引导记录)，这段程序也很简单，根据配置加载第二个引导装载程序，这个引导程序更加重要，提供了基本的文件管理工作。通常引导程序加载操作系统程序，然后把控制权交给操作系统。<br>由于我主要关注的kernel启动的过程，先不聊引导程序的细节了。</p>
-<p>有时间还是需要把引导程序grub也看看。之前只是大概浏览一下，现在只要知道grub引导了操作系统，x84_64系统并且将操作系统加载到0x100000的位置。</p>
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/21/linux-boot-2/" class="archive-article-date">
-  	<time datetime="2016-09-21T11:24:25.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Kernel/">Kernel</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/Linux/">Linux</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
     <article id="post-linux-boot-1" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -690,6 +630,61 @@
 
 
   
+    <article id="post-linux-kernel-main" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/09/20/linux-kernel-main/">linux_kernel_main</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>啥也没有，哈哈！</p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/20/linux-kernel-main/" class="archive-article-date">
+  	<time datetime="2016-09-20T00:34:31.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Kernel/">Kernel</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/Kernel/">Kernel</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+
+
+
+
+
+
+
+
+
+  
   
     <nav id="page-nav">
       <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/">Next &raquo;</a>
@@ -776,7 +771,7 @@ MathJax.Hub.Queue(function() {
     
     	<section class="tools-section tools-section-tag">
     			<div class="widget tagcloud" id="js-tagcloud">
-    				<a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 15px;">Hbase</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 15px;">Kernel</a>
+    				<a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a>
     			</div>
     	</section>
     
