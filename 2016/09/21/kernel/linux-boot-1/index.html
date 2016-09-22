@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>Linux 启动过程笔记(一) | Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="这个笔记是Linux 启动过程笔记系列的第一篇文章，是记录自己看Linux内核过程中的笔记，主要攻克以intel x86_64处理器为主的记录，其他处理器不做考虑。在此讨论的都是bzImage的结构。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux 启动过程笔记(一)">
+<meta property="og:url" content="http://yoursite.com/2016/09/21/kernel/linux-boot-1/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="这个笔记是Linux 启动过程笔记系列的第一篇文章，是记录自己看Linux内核过程中的笔记，主要攻克以intel x86_64处理器为主的记录，其他处理器不做考虑。在此讨论的都是bzImage的结构。">
+<meta property="og:updated_time" content="2016-09-22T01:22:41.431Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux 启动过程笔记(一)">
+<meta name="twitter:description" content="这个笔记是Linux 启动过程笔记系列的第一篇文章，是记录自己看Linux内核过程中的笔记，主要攻克以intel x86_64处理器为主的记录，其他处理器不做考虑。在此讨论的都是bzImage的结构。">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-kernel/linux-boot-1" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Linux 启动过程笔记(一)
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>这个笔记是Linux 启动过程笔记系列的第一篇文章，是记录自己看Linux内核过程中的笔记，主要攻克以intel x86_64处理器为主的记录，其他处理器不做考虑。在此讨论的都是bzImage的结构。<br><a id="more"></a></p>
+<h2 id="Linux-启动过程笔记-一"><a href="#Linux-启动过程笔记-一" class="headerlink" title="Linux 启动过程笔记(一)"></a>Linux 启动过程笔记(一)</h2><p>这个笔记是Linux 启动过程笔记系列的第一篇文章，是记录自己看Linux内核过程中的笔记，主要攻克以intel x86_64处理器为主的记录，其他处理器不做考虑。在此讨论的都是bzImage的结构。</p>
+<h2 id="起始"><a href="#起始" class="headerlink" title="起始"></a>起始</h2><p>自己发现在学习一些东西的过程中，没有记录的习惯，导致随着时间的过去，无法存档，反而一遍遍温习自己学过的内容，但是有没有记录的地方，导致每一次都是从新再来。所以感觉有一个良好的记录习惯还是很重要的。个人对kernel，jvm和大数据平台有点兴趣，特此在此做一个笔记，让以后自己也可以温习一下，这个系列的主要讲自己在阅读Linux kernel启动过程中阅读笔记。</p>
+<p>Linux kernel的目录结构就不描述了，有兴趣的可以参考其他文档。</p>
+<h2 id="电脑启动的一些知识"><a href="#电脑启动的一些知识" class="headerlink" title="电脑启动的一些知识"></a>电脑启动的一些知识</h2><p>我也不是硬件专业的，所以描述的有点笼统，这都不是重点，不是吗，毕竟我主要关心的是软件，哈哈！<br>电脑在加电自检后，BIOS也进入了工作，做了一些基本的工作，提供了一些初始化的工作，检测各个硬件，准备一些配置信息，BIOS的开发也是很重要的工作。<br>当前的计算机基本上都是硬盘结构的，计算机经过BIOS的引导后，开始加载第一个磁盘第一个扇区（硬盘的0柱面、0磁头、1扇区），这个扇区中存储的是计算机的引导代码，在linux中，我采用的是grub，第一个512字节很重要，基本上这个损坏了，那么你的电脑估计也就报废了，通过第一个扇区引导出了后续的动作，才能有了我们后面记录的内容。<br>通常第一个引导扇区叫做mbr(主引导记录)，这段程序也很简单，根据配置加载第二个引导装载程序，这个引导程序更加重要，提供了基本的文件管理工作。通常引导程序加载操作系统程序，然后把控制权交给操作系统。<br>由于我主要关注的kernel启动的过程，先不聊引导程序的细节了。</p>
+<p>有时间还是需要把引导程序grub也看看。之前只是大概浏览一下，现在只要知道grub引导了操作系统，x84_64系统并且将操作系统加载到0x100000的位置。</p>
+<h2 id="bzImage的生成"><a href="#bzImage的生成" class="headerlink" title="bzImage的生成"></a>bzImage的生成</h2><p>注意我们的平台都是64位的，也就是说BITS=64：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">arch\x86\boot\compressed\Makefile:</div><div class="line"></div><div class="line">$(obj)/vmlinux: $(obj)/vmlinux.lds $(obj)/head_$(BITS).o $(obj)/misc.o $(obj)/string.o $(obj)/cmdline.o $(obj)/early_serial_console.o $(obj)/piggy.o FORCE</div><div class="line">	$(call if_changed,ld)</div><div class="line">	@:</div><div class="line"></div><div class="line">$(obj)/piggy.S: $(obj)/vmlinux.bin.$(suffix-y) $(obj)/mkpiggy FORCE</div><div class="line">	$(call if_changed,mkpiggy)</div></pre></td></tr></table></figure></p>
+<p>这里suffix-y=gz。也就是说vmlinux的生成依赖<strong>vmlinux.lds,head_64.o,misc.o,string.o,cmdline.o,early_serial_console.o以及piggy.o</strong>。<strong>vmlinux.lds</strong>根据<strong>vmlinux.lds.S</strong>生成，主要是确定目标平台。这些文件都在<strong>arch\x86\boot\compressed</strong>目录中，make会根据对应的源文件生成这些目标，重点看<strong>piggy.S</strong>的生成过程。<br>从MakeFile的描述中，我们可以知道piggy.o的生成是根据mkpiggy程序生成的。而mkpiggy根据以下规则生成：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">quiet_cmd_mkpiggy = MKPIGGY $@</div><div class="line">      cmd_mkpiggy = $(obj)/mkpiggy $&lt; &gt; $@ || ( rm -f $@ ; false )</div></pre></td></tr></table></figure></p>
+<p>也就是根据mkpiggy.c文件生成：<br><figure class="highlight c"><table><tr><td class="code"><pre><div class="line">arch\x86\boot\compressed\mkpiggy.c：</div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;inttypes.h&gt;</span></span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">static</span> uint32_t <span class="title">getle32</span><span class="params">(<span class="keyword">const</span> <span class="keyword">void</span> *p)</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">const</span> <span class="keyword">uint8_t</span> *cp = p;</div><div class="line"></div><div class="line">	<span class="keyword">return</span> (<span class="keyword">uint32_t</span>)cp[<span class="number">0</span>] + ((<span class="keyword">uint32_t</span>)cp[<span class="number">1</span>] &lt;&lt; <span class="number">8</span>) +</div><div class="line">		((<span class="keyword">uint32_t</span>)cp[<span class="number">2</span>] &lt;&lt; <span class="number">16</span>) + ((<span class="keyword">uint32_t</span>)cp[<span class="number">3</span>] &lt;&lt; <span class="number">24</span>);</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span></span></div><div class="line">&#123;</div><div class="line">	<span class="keyword">uint32_t</span> olen;</div><div class="line">	<span class="keyword">long</span> ilen;</div><div class="line">	<span class="keyword">unsigned</span> <span class="keyword">long</span> offs;</div><div class="line">	FILE *f;</div><div class="line"></div><div class="line">	<span class="keyword">if</span> (argc &lt; <span class="number">2</span>) &#123;</div><div class="line">		<span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">"Usage: %s compressed_file\n"</span>, argv[<span class="number">0</span>]);</div><div class="line">		<span class="keyword">return</span> <span class="number">1</span>;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="comment">/* Get the information for the compressed kernel image first */</span></div><div class="line"></div><div class="line">	f = fopen(argv[<span class="number">1</span>], <span class="string">"r"</span>);</div><div class="line">	<span class="keyword">if</span> (!f) &#123;</div><div class="line">		perror(argv[<span class="number">1</span>]);</div><div class="line">		<span class="keyword">return</span> <span class="number">1</span>;</div><div class="line">	&#125;</div><div class="line"></div><div class="line"></div><div class="line">	<span class="keyword">if</span> (fseek(f, <span class="number">-4</span>L, SEEK_END)) &#123;</div><div class="line">		perror(argv[<span class="number">1</span>]);</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">if</span> (fread(&amp;olen, <span class="keyword">sizeof</span>(olen), <span class="number">1</span>, f) != <span class="number">1</span>) &#123;</div><div class="line">		perror(argv[<span class="number">1</span>]);</div><div class="line">		<span class="keyword">return</span> <span class="number">1</span>;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	ilen = ftell(f);</div><div class="line">	olen = getle32(&amp;olen);</div><div class="line">	fclose(f);</div><div class="line"></div><div class="line">	<span class="comment">/*</span></div><div class="line">	 * Now we have the input (compressed) and output (uncompressed)</div><div class="line">	 * sizes, compute the necessary decompression offset...</div><div class="line">	 */</div><div class="line"></div><div class="line">	offs = (olen &gt; ilen) ? olen - ilen : <span class="number">0</span>;</div><div class="line">	offs += olen &gt;&gt; <span class="number">12</span>;	<span class="comment">/* Add 8 bytes for each 32K block */</span></div><div class="line">	offs += <span class="number">64</span>*<span class="number">1024</span> + <span class="number">128</span>;	<span class="comment">/* Add 64K + 128 bytes slack */</span></div><div class="line">	offs = (offs+<span class="number">4095</span>) &amp; ~<span class="number">4095</span>; <span class="comment">/* Round to a 4K boundary */</span></div><div class="line"></div><div class="line">	<span class="built_in">printf</span>(<span class="string">".section \".rodata..compressed\",\"a\",@progbits\n"</span>);</div><div class="line">	<span class="built_in">printf</span>(<span class="string">".globl z_input_len\n"</span>);</div><div class="line">	<span class="built_in">printf</span>(<span class="string">"z_input_len = %lu\n"</span>, ilen);</div><div class="line">	<span class="built_in">printf</span>(<span class="string">".globl z_output_len\n"</span>);</div><div class="line">	<span class="built_in">printf</span>(<span class="string">"z_output_len = %lu\n"</span>, (<span class="keyword">unsigned</span> <span class="keyword">long</span>)olen);</div><div class="line">	<span class="built_in">printf</span>(<span class="string">".globl z_extract_offset\n"</span>);</div><div class="line">	<span class="built_in">printf</span>(<span class="string">"z_extract_offset = 0x%lx\n"</span>, offs);</div><div class="line">	<span class="comment">/* z_extract_offset_negative allows simplification of head_32.S */</span></div><div class="line">	<span class="built_in">printf</span>(<span class="string">".globl z_extract_offset_negative\n"</span>);</div><div class="line">	<span class="built_in">printf</span>(<span class="string">"z_extract_offset_negative = -0x%lx\n"</span>, offs);</div><div class="line"></div><div class="line">	<span class="built_in">printf</span>(<span class="string">".globl input_data, input_data_end\n"</span>);</div><div class="line">	<span class="built_in">printf</span>(<span class="string">"input_data:\n"</span>);</div><div class="line">	<span class="built_in">printf</span>(<span class="string">".incbin \"%s\"\n"</span>, argv[<span class="number">1</span>]);</div><div class="line">	<span class="built_in">printf</span>(<span class="string">"input_data_end:\n"</span>);</div><div class="line"></div><div class="line">	<span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>这段程序主要生成一些辅助信息，生成的文件如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">.section &quot;.rodata..compressed&quot;,&quot;a&quot;,@progbits         --编译的时候告诉gcc将vmlinux.bin.gz存储在&quot;.rodata..compressed&quot;</div><div class="line">.globl z_input_len</div><div class="line">z_input_len = 3677416                                --告诉gcc 符号z_input_len值为3677416</div><div class="line">.globl z_output_len</div><div class="line">z_output_len = 20965968                              --告诉gcc 符号z_output_len值为3677416</div><div class="line">.globl z_extract_offset</div><div class="line">z_extract_offset = 0x1087000                         --告诉gcc 符号z_extract_offset值为3677416</div><div class="line">.globl z_extract_offset_negative</div><div class="line">z_extract_offset_negative = -0x1087000               --告诉gcc 符号z_extract_offset_negative值为3677416</div><div class="line">.globl input_data, input_data_end</div><div class="line">input_data:</div><div class="line">.incbin &quot;arch/x86/boot/compressed/vmlinux.bin.gz&quot;</div><div class="line">input_data_end:</div></pre></td></tr></table></figure></p>
+<p>此段程序计算出了<strong>vmlinux.bin.gz</strong>压缩的大小，以及解压后的大小。编译<strong>piggy.S</strong>后就包含了一些符号变量和<strong>vmlinux.bin.gz</strong>。可以知道<strong>piggy.o</strong> objdump是认识的，但是其中的数据都是压缩后的。</p>
+<p>然后就根据<strong>vmlinux.lds</strong>生成<strong>vmlinux</strong>，内核提供一些引导程序和工具都保存在<strong>vmlinux.lds,head_64.o,misc.o,string.o,cmdline.o,early_serial_console.o以及piggy.o</strong>。这样<strong>vmlinux</strong>就组成了内核的载体，<strong>vmlinux</strong>开头是一些引导程序和工具，后面是<strong>piggy.o</strong> 。同事也可以看出程序的</p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/21/kernel/linux-boot-1/" class="archive-article-date">
+  	<time datetime="2016-09-21T11:24:25.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-21</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Kernel/">Kernel</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/Linux/">Linux</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+  
+    <a href="/2016/09/21/jvm-resouce-mark/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">JVM基础设施之ResourceMark</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="kernel/linux-boot-1" data-title="Linux 启动过程笔记(一)" data-url="http://yoursite.com/2016/09/21/kernel/linux-boot-1/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2016 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>
