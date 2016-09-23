@@ -6,18 +6,19 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <title>JVM之Klass结构介绍(一) | Corner XX daily log</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="概述我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。先来看看一张图，这张图描述了Klass的结构以及相互之间的关系。计算机中的所有构造基本可以分为两类，管理结构和数">
+  <meta name="description" content="概述我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。注意这里的Klass结构并不代表class。先来看看一张图，这张图描述了KlassKlass的结构以及相互之间的">
 <meta property="og:type" content="article">
 <meta property="og:title" content="JVM之Klass结构介绍(一)">
 <meta property="og:url" content="http://yoursite.com/2016/09/22/jvm/klass-desc-1/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
-<meta property="og:description" content="概述我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。先来看看一张图，这张图描述了Klass的结构以及相互之间的关系。计算机中的所有构造基本可以分为两类，管理结构和数">
+<meta property="og:description" content="概述我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。注意这里的Klass结构并不代表class。先来看看一张图，这张图描述了KlassKlass的结构以及相互之间的">
 <meta property="og:image" content="http://yoursite.com/img/jvm/klass.png">
 <meta property="og:image" content="http://yoursite.com/img/jvm/oopDesc.png">
-<meta property="og:updated_time" content="2016-09-22T07:37:16.161Z">
+<meta property="og:image" content="http://yoursite.com/img/jvm/oopDesc_class.png">
+<meta property="og:updated_time" content="2016-09-23T01:14:47.869Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="JVM之Klass结构介绍(一)">
-<meta name="twitter:description" content="概述我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。先来看看一张图，这张图描述了Klass的结构以及相互之间的关系。计算机中的所有构造基本可以分为两类，管理结构和数">
+<meta name="twitter:description" content="概述我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。注意这里的Klass结构并不代表class。先来看看一张图，这张图描述了KlassKlass的结构以及相互之间的">
 <meta name="twitter:image" content="http://yoursite.com/img/jvm/klass.png">
   
     <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
@@ -150,7 +151,11 @@
     <div class="article-entry" itemprop="articleBody">
       
         <a id="more"></a>
-<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？<br>这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。<br>先来看看一张图，这张图描述了Klass的结构以及相互之间的关系。<br><img src="/img/jvm/klass.png" alt=""><br>计算机中的所有构造基本可以分为两类，管理结构和数据结构，可以把管理结构理解为显示的政府机关，而数据结构对应的是人。为了更加方便的管理，维护秩序。提升效率，计算机是对人类社会的高度抽象。<br>而Klass作为class结构的运行时描述结构，虚拟机同样需要对Klass进行管理。而这个管理结构就是<strong>Oop</strong>(即oopDesc描述结构)：<br><img src="/img/jvm/oopDesc.png" alt=""></p>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>我们知道Java编译器把Java源文件编译为class文件，JVM对class文件进行加载解释，那么JVM在虚拟机对class控制管理的结构又是什么呢？<br>这个控制管理结构就是我们这里需要描述的Klass结构，它提供了class在虚拟机运行时的内存结构，用于管理控制运行时的class。<strong>注意这里的Klass结构并不代表class。</strong><br>先来看看一张图，这张图描述了KlassKlass的结构以及相互之间的关系，二KlassKlass是对Klass的描述，是所有描述结构的终点。<br><img src="/img/jvm/klass.png" alt=""><br>计算机中的所有构造基本可以分为两类，管理结构和数据结构，可以把管理结构理解为显示的政府机关，而数据结构对应的是人。为了更加方便的管理，维护秩序。提升效率，计算机是对人类社会的高度抽象。<br>而Klass作为class结构的运行时描述结构，虚拟机同样需要对Klass进行管理。而这个管理结构就是<strong>Oop</strong>(即oopDesc描述结构)：<br><img src="/img/jvm/oopDesc.png" alt=""><br>可以看到虚拟机为每一个对象类型提供了对应的内部结构。而这些对应的Klass的继承结构如下：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">Klass;</div><div class="line">|---instanceKlass;</div><div class="line">    |---instanceMirrorKlass;</div><div class="line">    |---instanceRefKlass;</div><div class="line">|---methodKlass;</div><div class="line">|---constMethodKlass;</div><div class="line">|---methodDataKlass;</div><div class="line">|---klassKlass;</div><div class="line">    |---instanceKlassKlass;</div><div class="line">    |---arrayKlassKlass;</div><div class="line">        |---objArrayKlassKlass;</div><div class="line">        |---typeArrayKlassKlass;</div><div class="line">|---arrayKlass;</div><div class="line">    |---objArrayKlass;</div><div class="line">    |---typeArrayKlass;</div><div class="line">|---constantPoolKlass;</div><div class="line">|---constantPoolCacheKlass;</div><div class="line">|---compiledICHolderKlass;</div></pre></td></tr></table></figure></p>
+<p>上面描述了Klass和Oop(即oopDesc描述结构)的继承关系。下面我们详细描述这些结构之间的关系，为后面的代码描述提供一些概念说明。</p>
+<p>首先，先看看C++中的内存布局：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">Object A</div><div class="line">|</div><div class="line">|-------super <span class="number">1</span>   vtable</div><div class="line">|-------super <span class="number">1</span>   member <span class="number">1</span></div><div class="line">|-------super <span class="number">1</span>   member ...</div><div class="line">|-------super <span class="number">1</span>   member n</div><div class="line">|-------super ... vtable </div><div class="line">|-------super ... member <span class="number">1</span></div><div class="line">|-------super ... member ...</div><div class="line">|-------super ... member n</div><div class="line">|-------super n   vtable </div><div class="line">|-------super n   member <span class="number">1</span> </div><div class="line">|-------super n   member ...</div><div class="line">|-------super n   member n</div><div class="line">|---child member <span class="number">1</span></div><div class="line">|---child member ...</div><div class="line">|---child member n</div></pre></td></tr></table></figure></p>
+<p>C++支持多继承，所以为每个父亲维护一个虚表指针以及对应的成员，最后存储的是自己的成员变量。成员函数不占用存储空间，成员函数是对象共享的，通过this维护上线文。</p>
+<h2 id="oopDesc"><a href="#oopDesc" class="headerlink" title="oopDesc"></a>oopDesc</h2><p><strong>oopDesc</strong>结构如下：<br><img src="/img/jvm/oopDesc_class.png" alt=""></p>
 <h2 id="Klass结构"><a href="#Klass结构" class="headerlink" title="Klass结构"></a>Klass结构</h2>
       
     </div>
