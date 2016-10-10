@@ -359,6 +359,67 @@
 
 
   
+    <article id="post-jvm/klass-desc-3" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/09/23/jvm/klass-desc-3/">JVM之Klass结构介绍(一)-----Klass结构</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <a id="more"></a>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>前面介绍了Klass总体结构以及oopDesc各个详细介绍，这里我们开始进入正题，重点介绍Klass，Klass作为JVM运行时的重要结构，提供了class运行时的内存结构，需要注意class和Klass的区分，Klass和Class类的区分，运行时期的Class类在内存中的结构并不是Klass。</p>
+<h2 id="Klass-类"><a href="#Klass-类" class="headerlink" title="Klass 类"></a>Klass 类</h2><p>这个类是整个Klass体系的基类，所有的子类都会有这个特性，下面描述的内容适合任何继承这个类的子类。<br>先看看它的定义,只看他的成员：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="keyword">class</span> oopDesc &#123;</div><div class="line">  <span class="keyword">friend</span> <span class="keyword">class</span> VMStructs;</div><div class="line"> <span class="keyword">private</span>:</div><div class="line">  <span class="keyword">volatile</span> markOop  <span class="number">_</span>mark;</div><div class="line">  <span class="keyword">union</span> <span class="number">_</span>metadata &#123;</div><div class="line">    wideKlassOop    <span class="number">_</span>klass;</div><div class="line">    narrowOop       <span class="number">_</span>compressed_klass;</div><div class="line">  &#125; <span class="number">_</span>metadata;</div><div class="line"></div><div class="line"> ...</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p><strong>oopDesc</strong>结构如下：<br><img src="/img/jvm/oopDesc_class.png" alt=""><br>我们分别看一下这个结构的成员，先看看第一个成员：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="keyword">volatile</span> markOop  <span class="number">_</span>mark;</div></pre></td></tr></table></figure></p>
+<p>这个成员的介绍可以参考<strong>markOopDesc</strong>结构。<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="keyword">union</span> <span class="number">_</span>metadata &#123;</div><div class="line">  wideKlassOop    <span class="number">_</span>klass;</div><div class="line">  narrowOop       <span class="number">_</span>compressed_klass;</div><div class="line">&#125; <span class="number">_</span>metadata;</div></pre></td></tr></table></figure></p>
+<p>这个成员主要用于为每个Klass维护一个对应的OopDesc指针。这是一个union结构，根据不同的场景解释，JVM提供一个压缩指针的特性，可以降低内存的使用，这里_compressed_klass指针指向的就是开启此功能会使用的指针。</p>
+<h2 id="markOopDesc"><a href="#markOopDesc" class="headerlink" title="markOopDesc"></a>markOopDesc</h2><p>每一个<strong>oopDesc</strong>以及子类都会有这个类的成员，这个成员控制了一些控制信息，各个控制位的功能，现在也不清楚，先做一个<strong>Mark</strong>,后面补充。<br>目前可以知道这个结构其实和oopDesc体系没有直接关系，只是由于历史原因导致。这个结构直接使用为oopDesc分配的内存空间作为真正的存储控制位的位置。所有解释的内容都来自oopDesc。<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="comment">//  64 bits:</span></div><div class="line"><span class="comment">//  --------</span></div><div class="line"><span class="comment">//  unused:25 hash:31 --&gt;| unused:1   age:4    biased_lock:1 lock:2 (normal object)</span></div><div class="line"><span class="comment">//  JavaThread*:54 epoch:2 unused:1   age:4    biased_lock:1 lock:2 (biased object)</span></div><div class="line"><span class="comment">//  PromotedObject*:61 ---------------------&gt;| promo_bits:3 -----&gt;| (CMS promoted object)</span></div><div class="line"><span class="comment">//  size:64 -----------------------------------------------------&gt;| (CMS free block)</span></div><div class="line"><span class="comment">//</span></div><div class="line"><span class="comment">//  unused:25 hash:31 --&gt;| cms_free:1 age:4    biased_lock:1 lock:2 (COOPs &amp;&amp; normal object)</span></div><div class="line"><span class="comment">//  JavaThread*:54 epoch:2 cms_free:1 age:4    biased_lock:1 lock:2 (COOPs &amp;&amp; biased object)</span></div><div class="line"><span class="comment">//  narrowOop:32 unused:24 cms_free:1 unused:4 promo_bits:3 -----&gt;| (COOPs &amp;&amp; CMS promoted object)</span></div><div class="line"><span class="comment">//  unused:21 size:35 --&gt;| cms_free:1 unused:7 ------------------&gt;| (COOPs &amp;&amp; CMS free block)</span></div></pre></td></tr></table></figure></p>
+<h2 id="instanceKlass"><a href="#instanceKlass" class="headerlink" title="instanceKlass"></a>instanceKlass</h2><h3 id="instanceMirrorKlass"><a href="#instanceMirrorKlass" class="headerlink" title="instanceMirrorKlass"></a>instanceMirrorKlass</h3><h3 id="instanceRefKlass"><a href="#instanceRefKlass" class="headerlink" title="instanceRefKlass"></a>instanceRefKlass</h3><h2 id="methodKlass"><a href="#methodKlass" class="headerlink" title="methodKlass"></a>methodKlass</h2><h2 id="constMethodKlass"><a href="#constMethodKlass" class="headerlink" title="constMethodKlass"></a>constMethodKlass</h2><h2 id="methodDataKlass"><a href="#methodDataKlass" class="headerlink" title="methodDataKlass"></a>methodDataKlass</h2><h2 id="klassKlass"><a href="#klassKlass" class="headerlink" title="klassKlass"></a>klassKlass</h2><h3 id="instanceKlassKlass"><a href="#instanceKlassKlass" class="headerlink" title="instanceKlassKlass"></a>instanceKlassKlass</h3><h3 id="arrayKlassKlass"><a href="#arrayKlassKlass" class="headerlink" title="arrayKlassKlass"></a>arrayKlassKlass</h3><h4 id="objArrayKlassKlass"><a href="#objArrayKlassKlass" class="headerlink" title="objArrayKlassKlass"></a>objArrayKlassKlass</h4><h4 id="typeArrayKlassKlass"><a href="#typeArrayKlassKlass" class="headerlink" title="typeArrayKlassKlass"></a>typeArrayKlassKlass</h4><h2 id="arrayKlass"><a href="#arrayKlass" class="headerlink" title="arrayKlass"></a>arrayKlass</h2><h3 id="objArrayKlass"><a href="#objArrayKlass" class="headerlink" title="objArrayKlass"></a>objArrayKlass</h3><h3 id="typeArrayKlass"><a href="#typeArrayKlass" class="headerlink" title="typeArrayKlass"></a>typeArrayKlass</h3><h2 id="constantPoolKlass"><a href="#constantPoolKlass" class="headerlink" title="constantPoolKlass"></a>constantPoolKlass</h2><h2 id="klassOopDesc"><a href="#klassOopDesc" class="headerlink" title="klassOopDesc"></a>klassOopDesc</h2><h2 id="constantPoolCacheKlass"><a href="#constantPoolCacheKlass" class="headerlink" title="constantPoolCacheKlass"></a>constantPoolCacheKlass</h2><h2 id="compiledICHolderKlass"><a href="#compiledICHolderKlass" class="headerlink" title="compiledICHolderKlass"></a>compiledICHolderKlass</h2>
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/23/jvm/klass-desc-3/" class="archive-article-date">
+  	<time datetime="2016-09-23T01:52:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/JAVA/">JAVA</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+
+
+
+
+
+
+
+
+
+  
     <article id="post-jvm/klass-desc-4" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -412,67 +473,6 @@
     <div class="article-info article-info-index">
       
       <a href="/2016/09/23/jvm/klass-desc-4/" class="archive-article-date">
-  	<time datetime="2016-09-23T01:52:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/JAVA/">JAVA</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
-    <article id="post-jvm/klass-desc-3" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/23/jvm/klass-desc-3/">JVM之Klass结构介绍(一)-----Klass结构</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <a id="more"></a>
-<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>前面介绍了Klass总体结构以及oopDesc各个详细介绍，这里我们开始进入正题，重点介绍Klass，Klass作为JVM运行时的重要结构，提供了class运行时的内存结构，需要注意class和Klass的区分，Klass和Class类的区分，运行时期的Class类在内存中的结构并不是Klass。</p>
-<h2 id="Klass-类"><a href="#Klass-类" class="headerlink" title="Klass 类"></a>Klass 类</h2><p>这个类是整个Klass体系的基类，所有的子类都会有这个特性，下面描述的内容适合任何继承这个类的子类。<br>先看看它的定义,只看他的成员：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="keyword">class</span> oopDesc &#123;</div><div class="line">  <span class="keyword">friend</span> <span class="keyword">class</span> VMStructs;</div><div class="line"> <span class="keyword">private</span>:</div><div class="line">  <span class="keyword">volatile</span> markOop  <span class="number">_</span>mark;</div><div class="line">  <span class="keyword">union</span> <span class="number">_</span>metadata &#123;</div><div class="line">    wideKlassOop    <span class="number">_</span>klass;</div><div class="line">    narrowOop       <span class="number">_</span>compressed_klass;</div><div class="line">  &#125; <span class="number">_</span>metadata;</div><div class="line"></div><div class="line"> ...</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p><strong>oopDesc</strong>结构如下：<br><img src="/img/jvm/oopDesc_class.png" alt=""><br>我们分别看一下这个结构的成员，先看看第一个成员：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="keyword">volatile</span> markOop  <span class="number">_</span>mark;</div></pre></td></tr></table></figure></p>
-<p>这个成员的介绍可以参考<strong>markOopDesc</strong>结构。<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="keyword">union</span> <span class="number">_</span>metadata &#123;</div><div class="line">  wideKlassOop    <span class="number">_</span>klass;</div><div class="line">  narrowOop       <span class="number">_</span>compressed_klass;</div><div class="line">&#125; <span class="number">_</span>metadata;</div></pre></td></tr></table></figure></p>
-<p>这个成员主要用于为每个Klass维护一个对应的OopDesc指针。这是一个union结构，根据不同的场景解释，JVM提供一个压缩指针的特性，可以降低内存的使用，这里_compressed_klass指针指向的就是开启此功能会使用的指针。</p>
-<h2 id="markOopDesc"><a href="#markOopDesc" class="headerlink" title="markOopDesc"></a>markOopDesc</h2><p>每一个<strong>oopDesc</strong>以及子类都会有这个类的成员，这个成员控制了一些控制信息，各个控制位的功能，现在也不清楚，先做一个<strong>Mark</strong>,后面补充。<br>目前可以知道这个结构其实和oopDesc体系没有直接关系，只是由于历史原因导致。这个结构直接使用为oopDesc分配的内存空间作为真正的存储控制位的位置。所有解释的内容都来自oopDesc。<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="comment">//  64 bits:</span></div><div class="line"><span class="comment">//  --------</span></div><div class="line"><span class="comment">//  unused:25 hash:31 --&gt;| unused:1   age:4    biased_lock:1 lock:2 (normal object)</span></div><div class="line"><span class="comment">//  JavaThread*:54 epoch:2 unused:1   age:4    biased_lock:1 lock:2 (biased object)</span></div><div class="line"><span class="comment">//  PromotedObject*:61 ---------------------&gt;| promo_bits:3 -----&gt;| (CMS promoted object)</span></div><div class="line"><span class="comment">//  size:64 -----------------------------------------------------&gt;| (CMS free block)</span></div><div class="line"><span class="comment">//</span></div><div class="line"><span class="comment">//  unused:25 hash:31 --&gt;| cms_free:1 age:4    biased_lock:1 lock:2 (COOPs &amp;&amp; normal object)</span></div><div class="line"><span class="comment">//  JavaThread*:54 epoch:2 cms_free:1 age:4    biased_lock:1 lock:2 (COOPs &amp;&amp; biased object)</span></div><div class="line"><span class="comment">//  narrowOop:32 unused:24 cms_free:1 unused:4 promo_bits:3 -----&gt;| (COOPs &amp;&amp; CMS promoted object)</span></div><div class="line"><span class="comment">//  unused:21 size:35 --&gt;| cms_free:1 unused:7 ------------------&gt;| (COOPs &amp;&amp; CMS free block)</span></div></pre></td></tr></table></figure></p>
-<h2 id="instanceKlass"><a href="#instanceKlass" class="headerlink" title="instanceKlass"></a>instanceKlass</h2><h3 id="instanceMirrorKlass"><a href="#instanceMirrorKlass" class="headerlink" title="instanceMirrorKlass"></a>instanceMirrorKlass</h3><h3 id="instanceRefKlass"><a href="#instanceRefKlass" class="headerlink" title="instanceRefKlass"></a>instanceRefKlass</h3><h2 id="methodKlass"><a href="#methodKlass" class="headerlink" title="methodKlass"></a>methodKlass</h2><h2 id="constMethodKlass"><a href="#constMethodKlass" class="headerlink" title="constMethodKlass"></a>constMethodKlass</h2><h2 id="methodDataKlass"><a href="#methodDataKlass" class="headerlink" title="methodDataKlass"></a>methodDataKlass</h2><h2 id="klassKlass"><a href="#klassKlass" class="headerlink" title="klassKlass"></a>klassKlass</h2><h3 id="instanceKlassKlass"><a href="#instanceKlassKlass" class="headerlink" title="instanceKlassKlass"></a>instanceKlassKlass</h3><h3 id="arrayKlassKlass"><a href="#arrayKlassKlass" class="headerlink" title="arrayKlassKlass"></a>arrayKlassKlass</h3><h4 id="objArrayKlassKlass"><a href="#objArrayKlassKlass" class="headerlink" title="objArrayKlassKlass"></a>objArrayKlassKlass</h4><h4 id="typeArrayKlassKlass"><a href="#typeArrayKlassKlass" class="headerlink" title="typeArrayKlassKlass"></a>typeArrayKlassKlass</h4><h2 id="arrayKlass"><a href="#arrayKlass" class="headerlink" title="arrayKlass"></a>arrayKlass</h2><h3 id="objArrayKlass"><a href="#objArrayKlass" class="headerlink" title="objArrayKlass"></a>objArrayKlass</h3><h3 id="typeArrayKlass"><a href="#typeArrayKlass" class="headerlink" title="typeArrayKlass"></a>typeArrayKlass</h3><h2 id="constantPoolKlass"><a href="#constantPoolKlass" class="headerlink" title="constantPoolKlass"></a>constantPoolKlass</h2><h2 id="klassOopDesc"><a href="#klassOopDesc" class="headerlink" title="klassOopDesc"></a>klassOopDesc</h2><h2 id="constantPoolCacheKlass"><a href="#constantPoolCacheKlass" class="headerlink" title="constantPoolCacheKlass"></a>constantPoolCacheKlass</h2><h2 id="compiledICHolderKlass"><a href="#compiledICHolderKlass" class="headerlink" title="compiledICHolderKlass"></a>compiledICHolderKlass</h2>
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/23/jvm/klass-desc-3/" class="archive-article-date">
   	<time datetime="2016-09-23T01:52:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
 </a>
       
