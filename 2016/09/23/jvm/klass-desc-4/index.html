@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>JVM之Klass结构介绍(三)-----Klass初始化 | Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="概述之前我们已经对数据结构有了一定的了解，这里我们看一下Klass对应结构的初始化。
+klassKlassObj对象klassKlassObj对象是一个klassOop结构的实例。hotspot\src\share\vm\memory\universe.cpp:void Universe::genesis(TRAPS) &amp;#123;...        _klassKlassObj">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JVM之Klass结构介绍(三)-----Klass初始化">
+<meta property="og:url" content="http://yoursite.com/2016/09/23/jvm/klass-desc-4/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="概述之前我们已经对数据结构有了一定的了解，这里我们看一下Klass对应结构的初始化。
+klassKlassObj对象klassKlassObj对象是一个klassOop结构的实例。hotspot\src\share\vm\memory\universe.cpp:void Universe::genesis(TRAPS) &amp;#123;...        _klassKlassObj">
+<meta property="og:image" content="http://yoursite.com/img/jvm/klassKlassObj.png">
+<meta property="og:updated_time" content="2016-09-23T03:28:26.643Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="JVM之Klass结构介绍(三)-----Klass初始化">
+<meta name="twitter:description" content="概述之前我们已经对数据结构有了一定的了解，这里我们看一下Klass对应结构的初始化。
+klassKlassObj对象klassKlassObj对象是一个klassOop结构的实例。hotspot\src\share\vm\memory\universe.cpp:void Universe::genesis(TRAPS) &amp;#123;...        _klassKlassObj">
+<meta name="twitter:image" content="http://yoursite.com/img/jvm/klassKlassObj.png">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-jvm/klass-desc-4" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      JVM之Klass结构介绍(三)-----Klass初始化
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <a id="more"></a>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>之前我们已经对数据结构有了一定的了解，这里我们看一下Klass对应结构的初始化。</p>
+<h2 id="klassKlassObj对象"><a href="#klassKlassObj对象" class="headerlink" title="klassKlassObj对象"></a>klassKlassObj对象</h2><p><strong>klassKlassObj</strong>对象是一个<strong>klassOop</strong>结构的实例。<br><img src="/img/jvm/klassKlassObj.png" alt=""><br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\memory\universe.cpp:</div><div class="line"></div><div class="line"><span class="keyword">void</span> Universe::genesis(TRAPS) &#123;</div><div class="line">...</div><div class="line"></div><div class="line">        <span class="number">_</span>klassKlassObj          = klassKlass::create_klass(CHECK);</div><div class="line">&#125;</div><div class="line"></div><div class="line">hotspot\src\share\vm\oops\klassKlass.cpp:</div><div class="line"></div><div class="line">klassOop klassKlass::create_klass(TRAPS) &#123;</div><div class="line">  KlassHandle h_this_klass; </div><div class="line">  klassKlass o;</div><div class="line">  <span class="comment">// for bootstrapping, handles may not be available yet.</span></div><div class="line">  klassOop k = base_create_klass_oop(h_this_klass, header_size(), o.vtbl_value(), CHECK_NULL);</div><div class="line">  k-&gt;set_klass(k); <span class="comment">// point to thyself</span></div><div class="line">  <span class="comment">// Do not try to allocate mirror, java.lang.Class not loaded at this point.</span></div><div class="line">  <span class="comment">// See Universe::fixup_mirrors()</span></div><div class="line">  <span class="keyword">return</span> k;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>注意这里h_this_klass以及o变量实在栈中分配。JVM为<strong>Klass</strong>提供了方便的<strong>KlassHandle</strong>，可以很方便的访问以及控制<strong>Klass</strong>。调用base_create_klass_oop创建对应的oop结构。注意这个方法的参数：<br>KlassHandle&amp; klass：这个是我们刚刚说的<strong>KlassHandle</strong>，指向的对应为null<br>int size：指的是对象大小，这里是oopDesc+klassKlass。<br>const Klass_vtbl&amp; vtbl：这是vtbl的结构，也就是klassKlass，由其分配内存空间。<br>TRAPS：可以看到这个的预定义,可以知道指的是THREAD <strong>the_thread</strong>，那么为什么这么写呢：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\utilities\exceptions.hpp：</div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> THREAD __the_thread__</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> TRAPS  Thread* THREAD</span></div></pre></td></tr></table></figure></p>
+<p>先看看这里专递的参数，也是一个预定义：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\utilities\exceptions.hpp：</div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> CHECK_NULL                               CHECK_(NULL)</span></div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> CHECK_(result)                           THREAD); <span class="meta-keyword">if</span> (HAS_PENDING_EXCEPTION) return result; (0</span></div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> HAS_PENDING_EXCEPTION                    (((ThreadShadow*)THREAD)-&gt;has_pending_exception())</span></div></pre></td></tr></table></figure></p>
+<p>可以看到这里定义了一个处理异常的方式，如果线程对象有一个挂起的异常，那么就直接返回。</p>
+<figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\oops\klass.cpp:</div><div class="line"></div><div class="line">klassOop Klass::base_create_klass_oop(KlassHandle&amp; klass, <span class="keyword">int</span> size,</div><div class="line">                                      <span class="keyword">const</span> Klass_vtbl&amp; vtbl, TRAPS) &#123;</div><div class="line">  size = align_object_size(size);</div><div class="line">  <span class="comment">// allocate and initialize vtable</span></div><div class="line">  Klass*   kl = (Klass*) vtbl.allocate_permanent(klass, size, CHECK_NULL);</div><div class="line">  klassOop k  = kl-&gt;as_klassOop();</div><div class="line"></div><div class="line">  &#123; <span class="comment">// Preinitialize supertype information.</span></div><div class="line">    <span class="comment">// A later call to initialize_supers() may update these settings:</span></div><div class="line">    kl-&gt;set_super(<span class="literal">NULL</span>);</div><div class="line">    <span class="keyword">for</span> (juint i = <span class="number">0</span>; i &lt; Klass::primary_super_limit(); i++) &#123;</div><div class="line">      kl-&gt;<span class="number">_</span>primary_supers[i] = <span class="literal">NULL</span>;</div><div class="line">    &#125;</div><div class="line">    kl-&gt;set_secondary_supers(<span class="literal">NULL</span>);</div><div class="line">    oop_store_without_check((oop*) &amp;kl-&gt;<span class="number">_</span>primary_supers[<span class="number">0</span>], k);</div><div class="line">    kl-&gt;set_super_check_offset(in_bytes(primary_supers_offset()));</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  kl-&gt;set_java_mirror(<span class="literal">NULL</span>);</div><div class="line">  kl-&gt;set_modifier_flags(<span class="number">0</span>);</div><div class="line">  kl-&gt;set_layout_helper(Klass::<span class="number">_l</span>h_neutral_value);</div><div class="line">  kl-&gt;set_name(<span class="literal">NULL</span>);</div><div class="line">  AccessFlags af;</div><div class="line">  af.set_flags(<span class="number">0</span>);</div><div class="line">  kl-&gt;set_access_flags(af);</div><div class="line">  kl-&gt;set_subklass(<span class="literal">NULL</span>);</div><div class="line">  kl-&gt;set_next_sibling(<span class="literal">NULL</span>);</div><div class="line">  kl-&gt;set_alloc_count(<span class="number">0</span>);</div><div class="line">  kl-&gt;set_alloc_size(<span class="number">0</span>);</div><div class="line">  TRACE_INIT_ID(kl);</div><div class="line"></div><div class="line">  kl-&gt;set_prototype_header(markOopDesc::prototype());</div><div class="line">  kl-&gt;set_biased_lock_revocation_count(<span class="number">0</span>);</div><div class="line">  kl-&gt;set_last_biased_lock_bulk_revocation_time(<span class="number">0</span>);</div><div class="line"></div><div class="line">  <span class="keyword">return</span> k;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>我们已经知道了分配内存空间，在这个场景是调用的是<strong>klassKlass::allocate_permanent</strong>（其实就是Klass::allocate_permanent）。程序中定义了一个统一的处理函数：</p>
+<figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\oops\klass.hpp:</div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> DEFINE_ALLOCATE_PERMANENT(thisKlass)                                  \</span></div><div class="line">  void* allocate_permanent(KlassHandle&amp; klass_klass, int size, TRAPS) const &#123; \</div><div class="line">    void* result = new(klass_klass, size, THREAD) thisKlass();                \</div><div class="line">    <span class="meta-keyword">if</span> (HAS_PENDING_EXCEPTION) return NULL;                                   \</div><div class="line">    klassOop new_klass = ((Klass*) result)-&gt;as_klassOop();                    \</div><div class="line">    OrderAccess::storestore();                                                \</div><div class="line">    post_new_init_klass(klass_klass, new_klass);                              \</div><div class="line">    return result;                                                            \</div><div class="line">  &#125;</div></pre></td></tr></table></figure>
+<p>Klass定义了一个预处理函数，在KlassKlass中调用了这个预定义：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\oops\klassKlass.hpp:</div><div class="line"></div><div class="line">  DEFINE_ALLOCATE_PERMANENT(klassKlass);</div></pre></td></tr></table></figure></p>
+<p>展开就是：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span>* <span class="title">allocate_permanent</span><span class="params">(KlassHandle&amp; klass_klass, <span class="keyword">int</span> size, Thread* <span class="number">__</span>the_thread__)</span> <span class="keyword">const</span> </span>&#123; \</div><div class="line">    <span class="keyword">void</span>* result = <span class="keyword">new</span>(klass_klass, size, <span class="number">__</span>the_thread__) klassKlass();                \</div><div class="line">    <span class="keyword">if</span> ((((ThreadShadow*)<span class="number">__</span>the_thread__)-&gt;has_pending_exception())) <span class="keyword">return</span> <span class="number">0</span>;                                   \</div><div class="line">    klassOop new_klass = ((Klass*) result)-&gt;as_klassOop();                    \</div><div class="line">    OrderAccess::storestore();                                                \</div><div class="line">    post_new_init_klass(klass_klass, new_klass);                              \</div><div class="line">    <span class="keyword">return</span> result;                                                            \</div><div class="line">  &#125;</div></pre></td></tr></table></figure></p>
+<p>可以看到new的调用是klassKlass类的new：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\oops\klass.cpp:</div><div class="line"></div><div class="line">void* Klass_vtbl::operator new(size_t ignored, KlassHandle&amp; klass,</div><div class="line">                               int size, TRAPS) &#123;</div><div class="line">  // The vtable pointer is installed during the execution of</div><div class="line">  // constructors in the call to permanent_obj_allocate().  Delay</div><div class="line">  // the installation of the klass pointer into the new klass &quot;k&quot;</div><div class="line">  // until after the vtable pointer has been installed (i.e., until</div><div class="line">  // after the return of permanent_obj_allocate().</div><div class="line">  klassOop k =</div><div class="line">    (klassOop) CollectedHeap::permanent_obj_allocate_no_klass_install(klass,</div><div class="line">      size, CHECK_NULL);</div><div class="line">  return k-&gt;klass_part();</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>可以知道new的第一个参数没有使用，这个参数指的是klassKlass的大小，那么为什么不使用呢，我们在前面看到了size中已经包含了这个参数的大小，由内存分配统一管理。继续往下：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\gc_interface\collectedHeap.<span class="keyword">inline</span>.hpp:</div><div class="line"></div><div class="line">oop CollectedHeap::permanent_obj_allocate_no_klass_install(KlassHandle klass,</div><div class="line">                                                           <span class="keyword">int</span> size,</div><div class="line">                                                           TRAPS) &#123;</div><div class="line">  debug_only(check_for_valid_allocation_state());</div><div class="line">  assert(!Universe::heap()-&gt;is_gc_active(), <span class="string">"Allocation during gc not allowed"</span>);</div><div class="line">  assert(size &gt;= <span class="number">0</span>, <span class="string">"int won't convert to size_t"</span>);</div><div class="line">  HeapWord* obj = common_permanent_mem_allocate_init(size, CHECK_NULL);</div><div class="line">  post_allocation_setup_no_klass_install(klass, obj);</div><div class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> PRODUCT</span></div><div class="line">  <span class="keyword">const</span> <span class="keyword">size_t</span> hs = oopDesc::header_size();</div><div class="line">  Universe::heap()-&gt;check_for_bad_heap_word_value(obj+hs, size-hs);</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">  <span class="keyword">return</span> (oop)obj;</div><div class="line">&#125;</div><div class="line"></div><div class="line">HeapWord* CollectedHeap::common_permanent_mem_allocate_init(<span class="keyword">size_t</span> size, TRAPS) &#123;</div><div class="line">  HeapWord* obj = common_permanent_mem_allocate_noinit(size, CHECK_NULL);</div><div class="line">  init_obj(obj, size);</div><div class="line">  <span class="keyword">return</span> obj;</div><div class="line">&#125;</div><div class="line"></div><div class="line">HeapWord* CollectedHeap::common_permanent_mem_allocate_noinit(<span class="keyword">size_t</span> size, TRAPS) &#123;</div><div class="line">  <span class="keyword">if</span> (HAS_PENDING_EXCEPTION) &#123;</div><div class="line">    NOT_PRODUCT(guarantee(<span class="literal">false</span>, <span class="string">"Should not allocate with exception pending"</span>));</div><div class="line">    <span class="keyword">return</span> <span class="literal">NULL</span>;  <span class="comment">// caller does a CHECK_NULL too</span></div><div class="line">  &#125;</div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> ASSERT</span></div><div class="line">  <span class="keyword">if</span> (CIFireOOMAt &gt; <span class="number">0</span> &amp;&amp; THREAD-&gt;is_Compiler_thread() &amp;&amp;</div><div class="line">      ++<span class="number">_f</span>ire_out_of_memory_count &gt;= CIFireOOMAt) &#123;</div><div class="line">    <span class="comment">// For testing of OOM handling in the CI throw an OOM and see how</span></div><div class="line">    <span class="comment">// it does.  Historically improper handling of these has resulted</span></div><div class="line">    <span class="comment">// in crashes which we really don't want to have in the CI.</span></div><div class="line">    THROW_OOP_0(Universe::out_of_memory_error_perm_gen());</div><div class="line">  &#125;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line"></div><div class="line">  HeapWord* result = Universe::heap()-&gt;permanent_mem_allocate(size);</div><div class="line">  <span class="keyword">if</span> (result != <span class="literal">NULL</span>) &#123;</div><div class="line">    NOT_PRODUCT(Universe::heap()-&gt;</div><div class="line">      check_for_non_bad_heap_word_value(result, size));</div><div class="line">    assert(!HAS_PENDING_EXCEPTION,</div><div class="line">           <span class="string">"Unexpected exception, will result in uninitialized storage"</span>);</div><div class="line">    <span class="keyword">return</span> result;</div><div class="line">  &#125;</div><div class="line">  <span class="comment">// -XX:+HeapDumpOnOutOfMemoryError and -XX:OnOutOfMemoryError support</span></div><div class="line">  report_java_out_of_memory(<span class="string">"PermGen space"</span>);</div><div class="line"></div><div class="line">  <span class="keyword">if</span> (JvmtiExport::should_post_resource_exhausted()) &#123;</div><div class="line">    JvmtiExport::post_resource_exhausted(</div><div class="line">        JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR,</div><div class="line">        <span class="string">"PermGen space"</span>);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  THROW_OOP_0(Universe::out_of_memory_error_perm_gen());</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">void</span> CollectedHeap::init_obj(HeapWord* obj, <span class="keyword">size_t</span> size) &#123;</div><div class="line">  assert(obj != <span class="literal">NULL</span>, <span class="string">"cannot initialize NULL object"</span>);</div><div class="line">  <span class="keyword">const</span> <span class="keyword">size_t</span> hs = oopDesc::header_size();</div><div class="line">  assert(size &gt;= hs, <span class="string">"unexpected object size"</span>);</div><div class="line">  ((oop)obj)-&gt;set_klass_gap(<span class="number">0</span>);</div><div class="line">  Copy::fill_to_aligned_words(obj + hs, size - hs);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>可以看出，这里其实已经交给内存管理器分配内存了，交给Java内存堆分配内存了，我们主要注意的是这个分配内存是在内存结构中的持久区，后面写一个专门介绍Java内存和GC的。这里就不详细描述了，只要知道我们获取了需要的内存就行了(JVM8已经取消了持久区)。fill_to_aligned_words的作用就是初始化KlassKlass。重点往下看：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\gc_interface\collectedHeap.<span class="keyword">inline</span>.hpp:</div><div class="line"></div><div class="line"><span class="keyword">void</span> CollectedHeap::post_allocation_setup_no_klass_install(KlassHandle klass,</div><div class="line">                                                           HeapWord* objPtr) &#123;</div><div class="line">  oop obj = (oop)objPtr;</div><div class="line"></div><div class="line">  assert(obj != <span class="literal">NULL</span>, <span class="string">"NULL object pointer"</span>);</div><div class="line">  <span class="keyword">if</span> (UseBiasedLocking &amp;&amp; (klass() != <span class="literal">NULL</span>)) &#123;</div><div class="line">    obj-&gt;set_mark(klass-&gt;prototype_header());</div><div class="line">  &#125; <span class="keyword">else</span> &#123;</div><div class="line">    <span class="comment">// May be bootstrapping</span></div><div class="line">    obj-&gt;set_mark(markOopDesc::prototype());</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>可以看到这里klass为null，所以KlassOopDesc的mark为markOopDesc::prototype()，即：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\oops\markOop.hpp:</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">static</span> markOop <span class="title">prototype</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">return</span> markOop( no_hash_in_place | no_lock_in_place );</div><div class="line">  &#125;</div></pre></td></tr></table></figure></p>
+<p>返回到allocate_permanent，<strong>OrderAccess::storestore()</strong>这个是实现Java内存模型重要的一步，涉及到处理器的内存模型，及其复杂，有时间也写一个这个相关的知识。这里只要知道调用这个方法后，后续处理器看到的内容是一致的就行了。<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\oops\klass.cpp:</div><div class="line"></div><div class="line"><span class="keyword">void</span> Klass_vtbl::post_new_init_klass(KlassHandle&amp; klass,</div><div class="line">                                     klassOop new_klass) <span class="keyword">const</span> &#123;</div><div class="line">  assert(!new_klass-&gt;klass_part()-&gt;null_vtbl(), <span class="string">"Not a complete klass"</span>);</div><div class="line">  CollectedHeap::post_allocation_install_obj_klass(klass, new_klass);</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">void</span> CollectedHeap::post_allocation_install_obj_klass(KlassHandle klass,</div><div class="line">                                                   oop obj) &#123;</div><div class="line">  <span class="comment">// These asserts are kind of complicated because of klassKlass</span></div><div class="line">  <span class="comment">// and the beginning of the world.</span></div><div class="line">  assert(klass() != <span class="literal">NULL</span> || !Universe::is_fully_initialized(), <span class="string">"NULL klass"</span>);</div><div class="line">  assert(klass() == <span class="literal">NULL</span> || klass()-&gt;is_klass(), <span class="string">"not a klass"</span>);</div><div class="line">  assert(klass() == <span class="literal">NULL</span> || klass()-&gt;klass_part() != <span class="literal">NULL</span>, <span class="string">"not a klass"</span>);</div><div class="line">  assert(obj != <span class="literal">NULL</span>, <span class="string">"NULL object pointer"</span>);</div><div class="line">  obj-&gt;set_klass(klass());</div><div class="line">  assert(!Universe::is_fully_initialized() || obj-&gt;blueprint() != <span class="literal">NULL</span>,</div><div class="line">         <span class="string">"missing blueprint"</span>);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>由于klass()为null，所以这里KlassOopDesc的_metadata成员为空。后面会修正这个指针。调用完，我们回到create_klass：<br>这个需要重点注意的是<strong>k-&gt;set_klass(k);</strong>,表明klassKlassObj的Klass指向的是自己，这个也是所有Klass的根。klassKlass作为Klass的描述结构，klassKlass指向的是自己。正如图中的箭头一样，_metadata指向的是klassKlassObj自己。</p>
+<p>后面的就是初始化KlassOopDesc和KlassKlass，至此这个对象的初始化已经完成。通过前面的图中，我们可以知道，在低地址是描述结构KlassOop，高地址存放的是KlassKlass结构。</p>
+<p>我们来看看几个比较重要的辅助函数：<br>Klass-&gt;as_klassOop()可以从Klass得到描述结构klassOop的指针，看一下这个函数：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\oops\klass.hpp:</div><div class="line"></div><div class="line">  <span class="function">klassOop <span class="title">as_klassOop</span><span class="params">()</span> <span class="keyword">const</span> </span>&#123;</div><div class="line">    <span class="comment">// see klassOop.hpp for layout.</span></div><div class="line">    <span class="keyword">return</span> (klassOop) (((<span class="keyword">char</span>*) <span class="keyword">this</span>) - <span class="keyword">sizeof</span>(klassOopDesc));</div><div class="line">  &#125;</div></pre></td></tr></table></figure></p>
+<p>通过前面可以知道在低地址是描述结构KlassOop(指针)，高地址存放的是KlassKlass结构。Klass前面就是KlassOopDesc，Klass指针减去头的大小就是klassOop地址了。<br>类似，知道klassOop就可以访问Klass，klassOopDesc中的函数klass_part可以快速获取Klass结构：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\oops\klassOop.hpp:</div><div class="line"></div><div class="line">  <span class="function">Klass* <span class="title">klass_part</span><span class="params">()</span> <span class="keyword">const</span>                      </span>&#123; <span class="keyword">return</span> (Klass*)((address)<span class="keyword">this</span> + <span class="keyword">sizeof</span>(klassOopDesc)); &#125;</div></pre></td></tr></table></figure></p>
+<p>KlassOopDesc指针加上头的大小就可以特岛Klass的地址了。</p>
+<p>需要特别注意的是KlassOop是指向KlassOopDesc的指针，也就是Oop是指针，而OopDesc是真正的数据结构。</p>
+<h2 id="arrayKlassKlassObj-objArrayKlassKlassObj-instanceKlassKlassObj-typeArrayKlassKlassObj"><a href="#arrayKlassKlassObj-objArrayKlassKlassObj-instanceKlassKlassObj-typeArrayKlassKlassObj" class="headerlink" title="arrayKlassKlassObj,objArrayKlassKlassObj,instanceKlassKlassObj,typeArrayKlassKlassObj"></a>arrayKlassKlassObj,objArrayKlassKlassObj,instanceKlassKlassObj,typeArrayKlassKlassObj</h2><p>arrayKlassKlass是所有数组的基类。<br><figure class="highlight"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\memory\universe.cpp:</div><div class="line"></div><div class="line">        _arrayKlassKlassObj     = arrayKlassKlass::create_klass(CHECK);</div><div class="line"></div><div class="line"></div><div class="line">hotspot\src\share\vm\oops\arrayKlassKlass.cpp:</div><div class="line"></div><div class="line">klassOop arrayKlassKlass::create_klass(TRAPS) &#123;</div><div class="line">  arrayKlassKlass o;</div><div class="line">  KlassHandle h_this_klass(THREAD, Universe::klassKlassObj());</div><div class="line">  KlassHandle k = base_create_klass(h_this_klass, header_size(), o.vtbl_value(), CHECK_NULL);</div><div class="line">  // Make sure size calculation is right</div><div class="line">  assert(k()-&gt;size() == align_object_size(header_size()), "wrong size for object");</div><div class="line">  java_lang_Class::create_mirror(k, CHECK_NULL); // Allocate mirror, make links</div><div class="line">  return k();</div><div class="line">&#125;</div><div class="line"></div><div class="line">hotspot\src\share\vm\oops\klass.cpp:</div><div class="line"></div><div class="line">KlassHandle Klass::base_create_klass(KlassHandle&amp; klass, int size,</div><div class="line">                                     const Klass_vtbl&amp; vtbl, TRAPS) &#123;</div><div class="line">  klassOop ek = base_create_klass_oop(klass, size, vtbl, THREAD);</div><div class="line">  return KlassHandle(THREAD, ek);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>可以知道这个创建和klassKlassObj大同小异，主要注意的是：<br>Klass_vtbl指的是arrayKlassKlass<br>KlassHandle&amp; klass指的是指向klassKlassObj的KlassHandle<br>所以arrayKlassKlassObj的_metadata指向的是klassKlassObj。还有一个特别的是，在这里多调用了java_lang_Class::create_mirror。<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\classfile\javaClasses.hpp:</div><div class="line">  <span class="function"><span class="keyword">static</span> oop  <span class="title">create_mirror</span><span class="params">(KlassHandle k, TRAPS)</span> </span>&#123;</div><div class="line">    <span class="keyword">return</span> create_mirror(k, Handle(), THREAD);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">oop java_lang_Class::create_mirror(KlassHandle k, Handle class_loader, TRAPS) &#123;</div><div class="line">  assert(k-&gt;java_mirror() == <span class="literal">NULL</span>, <span class="string">"should only assign mirror once"</span>);</div><div class="line">  <span class="comment">// Use this moment of initialization to cache modifier_flags also,</span></div><div class="line">  <span class="comment">// to support Class.getModifiers().  Instance classes recalculate</span></div><div class="line">  <span class="comment">// the cached flags after the class file is parsed, but before the</span></div><div class="line">  <span class="comment">// class is put into the system dictionary.</span></div><div class="line">  <span class="keyword">int</span> computed_modifiers = k-&gt;compute_modifier_flags(CHECK_0);</div><div class="line">  k-&gt;set_modifier_flags(computed_modifiers);</div><div class="line">  <span class="keyword">if</span> (SystemDictionary::Class_klass_loaded() &amp;&amp; (k-&gt;oop_is_instance() || k-&gt;oop_is_javaArray())) &#123;</div><div class="line">    <span class="comment">// Allocate mirror (java.lang.Class instance)</span></div><div class="line">    Handle mirror = instanceMirrorKlass::cast(SystemDictionary::Class_klass())-&gt;allocate_instance(k, CHECK_0);</div><div class="line"></div><div class="line">    instanceMirrorKlass* mk = instanceMirrorKlass::cast(mirror-&gt;klass());</div><div class="line">    java_lang_Class::set_static_oop_field_count(mirror(), mk-&gt;compute_static_oop_field_count(mirror()));</div><div class="line"></div><div class="line">    <span class="comment">// It might also have a component mirror.  This mirror must already exist.</span></div><div class="line">    <span class="keyword">if</span> (k-&gt;oop_is_javaArray()) &#123;</div><div class="line">      Handle comp_mirror;</div><div class="line">      <span class="keyword">if</span> (k-&gt;oop_is_typeArray()) &#123;</div><div class="line">        BasicType type = typeArrayKlass::cast(k-&gt;as_klassOop())-&gt;element_type();</div><div class="line">        comp_mirror = Universe::java_mirror(type);</div><div class="line">        assert(comp_mirror.not_null(), <span class="string">"must have primitive mirror"</span>);</div><div class="line">      &#125; <span class="keyword">else</span> <span class="keyword">if</span> (k-&gt;oop_is_objArray()) &#123;</div><div class="line">        klassOop element_klass = objArrayKlass::cast(k-&gt;as_klassOop())-&gt;element_klass();</div><div class="line">        <span class="keyword">if</span> (element_klass != <span class="literal">NULL</span></div><div class="line">            &amp;&amp; (Klass::cast(element_klass)-&gt;oop_is_instance() ||</div><div class="line">                Klass::cast(element_klass)-&gt;oop_is_javaArray())) &#123;</div><div class="line">          comp_mirror = Klass::cast(element_klass)-&gt;java_mirror();</div><div class="line">          assert(comp_mirror.not_null(), <span class="string">"must have element mirror"</span>);</div><div class="line">        &#125;</div><div class="line">        <span class="comment">// else some object array internal to the VM, like systemObjArrayKlassObj</span></div><div class="line">      &#125;</div><div class="line">      <span class="keyword">if</span> (comp_mirror.not_null()) &#123;</div><div class="line">        <span class="comment">// Two-way link between the array klass and its component mirror:</span></div><div class="line">        arrayKlass::cast(k-&gt;as_klassOop())-&gt;set_component_mirror(comp_mirror());</div><div class="line">        set_array_klass(comp_mirror(), k-&gt;as_klassOop());</div><div class="line">      &#125;</div><div class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (k-&gt;oop_is_instance()) &#123;</div><div class="line">      <span class="comment">// Initialize static fields</span></div><div class="line">      instanceKlass::cast(k())-&gt;do_local_static_fields(&amp;initialize_static_field, CHECK_NULL);</div><div class="line">    &#125;</div><div class="line">    <span class="comment">// set the classLoader field in the java_lang_Class instance</span></div><div class="line">    assert(class_loader() == k-&gt;class_loader(), <span class="string">"should be same"</span>);</div><div class="line">    set_class_loader(mirror(), class_loader());</div><div class="line">    <span class="keyword">return</span> mirror();</div><div class="line">  &#125; <span class="keyword">else</span> &#123;</div><div class="line">    <span class="keyword">return</span> <span class="literal">NULL</span>;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>虽然调用了，但其实这里基本不做任何操作。可以先了解这个的作用，后面还会详细的介绍，这里其实就是创建Class类对应的内存结构。</p>
+<p>objArrayKlassKlass是所有arrayKlassKlass的klass。初始化和arrayKlassKlassObj差不多。objArrayKlassKlassObj就不写了。<br>instanceKlassKlass是所有instanceKlass的klass。初始化和arrayKlassKlassObj差不多。instanceKlassKlassObj就不写了。<br>typeArrayKlassKlass是所有typeArrayKlassKlass的klass。初始化和arrayKlassKlassObj差不多。typeArrayKlassKlassObj就不写了。</p>
+<h2 id="boolArrayKlassObj-charArrayKlassObj-singleArrayKlassObj-doubleArrayKlassObj-byteArrayKlassObj-shortArrayKlassObj-intArrayKlassObj-longArrayKlassObj"><a href="#boolArrayKlassObj-charArrayKlassObj-singleArrayKlassObj-doubleArrayKlassObj-byteArrayKlassObj-shortArrayKlassObj-intArrayKlassObj-longArrayKlassObj" class="headerlink" title="_boolArrayKlassObj,_charArrayKlassObj,_singleArrayKlassObj,_doubleArrayKlassObj,_byteArrayKlassObj,_shortArrayKlassObj,_intArrayKlassObj,_longArrayKlassObj"></a>_boolArrayKlassObj,_charArrayKlassObj,_singleArrayKlassObj,_doubleArrayKlassObj,_byteArrayKlassObj,_shortArrayKlassObj,_intArrayKlassObj,_longArrayKlassObj</h2><p>这些对象的初始化都是类似的，只介绍_boolArrayKlassObj的初始化。这个对应了Java语言的基本类型数组。<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\memory\universe.cpp:</div><div class="line"></div><div class="line">        <span class="number">_b</span>oolArrayKlassObj      = typeArrayKlass::create_klass(T_BOOLEAN, <span class="keyword">sizeof</span>(jboolean), CHECK);</div><div class="line">        <span class="number">_</span>charArrayKlassObj      = typeArrayKlass::create_klass(T_CHAR,    <span class="keyword">sizeof</span>(jchar),    CHECK);</div><div class="line">        <span class="number">_</span>singleArrayKlassObj    = typeArrayKlass::create_klass(T_FLOAT,   <span class="keyword">sizeof</span>(jfloat),   CHECK);</div><div class="line">        <span class="number">_</span>doubleArrayKlassObj    = typeArrayKlass::create_klass(T_DOUBLE,  <span class="keyword">sizeof</span>(jdouble),  CHECK);</div><div class="line">        <span class="number">_b</span>yteArrayKlassObj      = typeArrayKlass::create_klass(T_BYTE,    <span class="keyword">sizeof</span>(jbyte),    CHECK);</div><div class="line">        <span class="number">_</span>shortArrayKlassObj     = typeArrayKlass::create_klass(T_SHORT,   <span class="keyword">sizeof</span>(jshort),   CHECK);</div><div class="line">        <span class="number">_</span>intArrayKlassObj       = typeArrayKlass::create_klass(T_INT,     <span class="keyword">sizeof</span>(jint),     CHECK);</div><div class="line">        <span class="number">_l</span>ongArrayKlassObj      = typeArrayKlass::create_klass(T_LONG,    <span class="keyword">sizeof</span>(jlong),    CHECK);</div><div class="line"></div><div class="line">hotspot\src\share\vm\oops\typeArrayKlass.hpp:</div><div class="line">  <span class="function"><span class="keyword">static</span> <span class="keyword">inline</span> klassOop <span class="title">create_klass</span><span class="params">(BasicType type, <span class="keyword">int</span> scale, TRAPS)</span> </span>&#123;</div><div class="line">    <span class="keyword">return</span> create_klass(type, scale, external_name(type), CHECK_NULL);</div><div class="line">  &#125;</div></pre></td></tr></table></figure></p>
+<p>type:指的数据类型。可以的值为：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="keyword">enum</span> BasicType &#123;</div><div class="line">  T_BOOLEAN  =  <span class="number">4</span>,</div><div class="line">  T_CHAR     =  <span class="number">5</span>,</div><div class="line">  T_FLOAT    =  <span class="number">6</span>,</div><div class="line">  T_DOUBLE   =  <span class="number">7</span>,</div><div class="line">  T_BYTE     =  <span class="number">8</span>,</div><div class="line">  T_SHORT    =  <span class="number">9</span>,</div><div class="line">  T_INT      = <span class="number">10</span>,</div><div class="line">  T_LONG     = <span class="number">11</span>,</div><div class="line">  T_OBJECT   = <span class="number">12</span>,</div><div class="line">  T_ARRAY    = <span class="number">13</span>,</div><div class="line">  T_VOID     = <span class="number">14</span>,</div><div class="line">  T_ADDRESS  = <span class="number">15</span>,</div><div class="line">  T_NARROWOOP= <span class="number">16</span>,</div><div class="line">  T_CONFLICT = <span class="number">17</span>, <span class="comment">// for stack value type with conflicting contents</span></div><div class="line">  T_ILLEGAL  = <span class="number">99</span></div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<p>这里使用了几个基本类型。<br>scale:指的是对应数据类型的大小，单位为字节。</p>
+<h3 id="instanceRefKlass"><a href="#instanceRefKlass" class="headerlink" title="instanceRefKlass"></a>instanceRefKlass</h3><h2 id="methodKlass"><a href="#methodKlass" class="headerlink" title="methodKlass"></a>methodKlass</h2><h2 id="constMethodKlass"><a href="#constMethodKlass" class="headerlink" title="constMethodKlass"></a>constMethodKlass</h2><h2 id="methodDataKlass"><a href="#methodDataKlass" class="headerlink" title="methodDataKlass"></a>methodDataKlass</h2><h2 id="klassKlass"><a href="#klassKlass" class="headerlink" title="klassKlass"></a>klassKlass</h2><h3 id="instanceKlassKlass"><a href="#instanceKlassKlass" class="headerlink" title="instanceKlassKlass"></a>instanceKlassKlass</h3><h3 id="arrayKlassKlass"><a href="#arrayKlassKlass" class="headerlink" title="arrayKlassKlass"></a>arrayKlassKlass</h3><h4 id="objArrayKlassKlass"><a href="#objArrayKlassKlass" class="headerlink" title="objArrayKlassKlass"></a>objArrayKlassKlass</h4><h4 id="typeArrayKlassKlass"><a href="#typeArrayKlassKlass" class="headerlink" title="typeArrayKlassKlass"></a>typeArrayKlassKlass</h4><h2 id="arrayKlass"><a href="#arrayKlass" class="headerlink" title="arrayKlass"></a>arrayKlass</h2><h3 id="objArrayKlass"><a href="#objArrayKlass" class="headerlink" title="objArrayKlass"></a>objArrayKlass</h3><h3 id="typeArrayKlass"><a href="#typeArrayKlass" class="headerlink" title="typeArrayKlass"></a>typeArrayKlass</h3><h2 id="constantPoolKlass"><a href="#constantPoolKlass" class="headerlink" title="constantPoolKlass"></a>constantPoolKlass</h2><h2 id="klassOopDesc"><a href="#klassOopDesc" class="headerlink" title="klassOopDesc"></a>klassOopDesc</h2><h2 id="constantPoolCacheKlass"><a href="#constantPoolCacheKlass" class="headerlink" title="constantPoolCacheKlass"></a>constantPoolCacheKlass</h2><h2 id="compiledICHolderKlass"><a href="#compiledICHolderKlass" class="headerlink" title="compiledICHolderKlass"></a>compiledICHolderKlass</h2>
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/23/jvm/klass-desc-4/" class="archive-article-date">
+  	<time datetime="2016-09-23T01:52:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/JAVA/">JAVA</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2016/09/23/jvm/jvm-hash-1/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          JVM之Hash算法
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2016/09/23/jvm/klass-desc-3/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">JVM之Klass结构介绍(一)-----Klass结构</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="jvm/klass-desc-4" data-title="JVM之Klass结构介绍(三)-----Klass初始化" data-url="http://yoursite.com/2016/09/23/jvm/klass-desc-4/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2016 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a> <a href="/tags/OpenJDK/" style="font-size: 13.33px;">OpenJDK</a> <a href="/tags/Phoenix/" style="font-size: 10px;">Phoenix</a> <a href="/tags/algorithm/" style="font-size: 10px;">algorithm</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>
