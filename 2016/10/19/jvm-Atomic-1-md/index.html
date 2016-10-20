@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>JVM基础之Atomic类 | Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="JVM提供了丰富了原子操作，这些操作都封装在Atomic类中，我们详细学一下这个类的实现，设计到底层，全部描述基于intel X86_64平台。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JVM基础之Atomic类">
+<meta property="og:url" content="http://yoursite.com/2016/10/19/jvm-Atomic-1-md/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="JVM提供了丰富了原子操作，这些操作都封装在Atomic类中，我们详细学一下这个类的实现，设计到底层，全部描述基于intel X86_64平台。">
+<meta property="og:updated_time" content="2016-10-20T03:01:42.845Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="JVM基础之Atomic类">
+<meta name="twitter:description" content="JVM提供了丰富了原子操作，这些操作都封装在Atomic类中，我们详细学一下这个类的实现，设计到底层，全部描述基于intel X86_64平台。">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-jvm-Atomic-1-md" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      JVM基础之Atomic类
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>JVM提供了丰富了原子操作，这些操作都封装在Atomic类中，我们详细学一下这个类的实现，设计到底层，全部描述基于intel X86_64平台。<br><a id="more"></a></p>
+<h2 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h2><p>先看看<strong>Atomic</strong>类的定义，包含了很多的原子（之所以叫原子，是原子是最小不可分割的，但是现在也正式原子不是最小的，是可以分割的，atomic就可以理解为不可分割的操作）方法：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="keyword">class</span> Atomic : AllStatic &#123;</div><div class="line"> <span class="keyword">public</span>:</div><div class="line">  <span class="comment">// Atomic operations on jlong types are not available on all 32-bit</span></div><div class="line">  <span class="comment">// platforms. If atomic ops on jlongs are defined here they must only</span></div><div class="line">  <span class="comment">// be used from code that verifies they are available at runtime and</span></div><div class="line">  <span class="comment">// can provide an alternative action if not - see supports_cx8() for</span></div><div class="line">  <span class="comment">// a means to test availability.</span></div><div class="line"></div><div class="line">  <span class="comment">// Atomically store to a location</span></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store</span>    <span class="params">(jbyte    store_value, jbyte*    dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store</span>    <span class="params">(jshort   store_value, jshort*   dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store</span>    <span class="params">(jint     store_value, jint*     dest)</span></span>;</div><div class="line">  <span class="comment">// See comment above about using jlong atomics on 32-bit platforms</span></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store</span>    <span class="params">(jlong    store_value, jlong*    dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store_ptr</span><span class="params">(<span class="keyword">intptr_t</span> store_value, <span class="keyword">intptr_t</span>* dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store_ptr</span><span class="params">(<span class="keyword">void</span>*    store_value, <span class="keyword">void</span>*     dest)</span></span>;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store</span>    <span class="params">(jbyte    store_value, <span class="keyword">volatile</span> jbyte*    dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store</span>    <span class="params">(jshort   store_value, <span class="keyword">volatile</span> jshort*   dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store</span>    <span class="params">(jint     store_value, <span class="keyword">volatile</span> jint*     dest)</span></span>;</div><div class="line">  <span class="comment">// See comment above about using jlong atomics on 32-bit platforms</span></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store</span>    <span class="params">(jlong    store_value, <span class="keyword">volatile</span> jlong*    dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store_ptr</span><span class="params">(<span class="keyword">intptr_t</span> store_value, <span class="keyword">volatile</span> <span class="keyword">intptr_t</span>* dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">store_ptr</span><span class="params">(<span class="keyword">void</span>*    store_value, <span class="keyword">volatile</span> <span class="keyword">void</span>*     dest)</span></span>;</div><div class="line"></div><div class="line">  <span class="comment">// See comment above about using jlong atomics on 32-bit platforms</span></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> jlong <span class="title">load</span><span class="params">(<span class="keyword">volatile</span> jlong* src)</span></span>;</div><div class="line"></div><div class="line">  <span class="comment">// Atomically add to a location, return updated value</span></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> jint     <span class="title">add</span>    <span class="params">(jint     add_value, <span class="keyword">volatile</span> jint*     dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> intptr_t <span class="title">add_ptr</span><span class="params">(<span class="keyword">intptr_t</span> add_value, <span class="keyword">volatile</span> <span class="keyword">intptr_t</span>* dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span>*    <span class="title">add_ptr</span><span class="params">(<span class="keyword">intptr_t</span> add_value, <span class="keyword">volatile</span> <span class="keyword">void</span>*     dest)</span></span>;</div><div class="line">  <span class="comment">// See comment above about using jlong atomics on 32-bit platforms</span></div><div class="line">         <span class="function"><span class="keyword">static</span> jlong    <span class="title">add</span>    <span class="params">(jlong    add_value, <span class="keyword">volatile</span> jlong*    dest)</span></span>;</div><div class="line"></div><div class="line">  <span class="comment">// Atomically increment location</span></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">inc</span>    <span class="params">(<span class="keyword">volatile</span> jint*     dest)</span></span>;</div><div class="line">         <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">inc</span>    <span class="params">(<span class="keyword">volatile</span> jshort*   dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">inc_ptr</span><span class="params">(<span class="keyword">volatile</span> <span class="keyword">intptr_t</span>* dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">inc_ptr</span><span class="params">(<span class="keyword">volatile</span> <span class="keyword">void</span>*     dest)</span></span>;</div><div class="line"></div><div class="line">  <span class="comment">// Atomically decrement a location</span></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">dec</span>    <span class="params">(<span class="keyword">volatile</span> jint*     dest)</span></span>;</div><div class="line">         <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">dec</span>    <span class="params">(<span class="keyword">volatile</span> jshort*    dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">dec_ptr</span><span class="params">(<span class="keyword">volatile</span> <span class="keyword">intptr_t</span>* dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">dec_ptr</span><span class="params">(<span class="keyword">volatile</span> <span class="keyword">void</span>*     dest)</span></span>;</div><div class="line"></div><div class="line">  <span class="comment">// Performs atomic exchange of *dest with exchange_value.  Returns old prior value of *dest.</span></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> jint         <span class="title">xchg</span><span class="params">(jint         exchange_value, <span class="keyword">volatile</span> jint*         dest)</span></span>;</div><div class="line">         <span class="function"><span class="keyword">static</span> <span class="keyword">unsigned</span> <span class="keyword">int</span> <span class="title">xchg</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">int</span> exchange_value, <span class="keyword">volatile</span> <span class="keyword">unsigned</span> <span class="keyword">int</span>* dest)</span></span>;</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> intptr_t <span class="title">xchg_ptr</span><span class="params">(<span class="keyword">intptr_t</span> exchange_value, <span class="keyword">volatile</span> <span class="keyword">intptr_t</span>* dest)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span>*    <span class="title">xchg_ptr</span><span class="params">(<span class="keyword">void</span>*    exchange_value, <span class="keyword">volatile</span> <span class="keyword">void</span>*   dest)</span></span>;</div><div class="line"></div><div class="line">  <span class="comment">// Performs atomic compare of *dest and compare_value, and exchanges *dest with exchange_value</span></div><div class="line">  <span class="comment">// if the comparison succeeded.  Returns prior value of *dest.  Guarantees a two-way memory</span></div><div class="line">  <span class="comment">// barrier across the cmpxchg.  I.e., it's really a 'fence_cmpxchg_acquire'.</span></div><div class="line">         <span class="function"><span class="keyword">static</span> jbyte    <span class="title">cmpxchg</span>    <span class="params">(jbyte    exchange_value, <span class="keyword">volatile</span> jbyte*    dest, jbyte    compare_value)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> jint     <span class="title">cmpxchg</span>    <span class="params">(jint     exchange_value, <span class="keyword">volatile</span> jint*     dest, jint     compare_value)</span></span>;</div><div class="line">  <span class="comment">// See comment above about using jlong atomics on 32-bit platforms</span></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> jlong    <span class="title">cmpxchg</span>    <span class="params">(jlong    exchange_value, <span class="keyword">volatile</span> jlong*    dest, jlong    compare_value)</span></span>;</div><div class="line"></div><div class="line">         <span class="function"><span class="keyword">static</span> <span class="keyword">unsigned</span> <span class="keyword">int</span> <span class="title">cmpxchg</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">int</span> exchange_value,</span></span></div><div class="line">                                     <span class="keyword">volatile</span> <span class="keyword">unsigned</span> <span class="keyword">int</span>* dest,</div><div class="line">                                     <span class="keyword">unsigned</span> <span class="keyword">int</span> compare_value);</div><div class="line"></div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> intptr_t <span class="title">cmpxchg_ptr</span><span class="params">(<span class="keyword">intptr_t</span> exchange_value, <span class="keyword">volatile</span> <span class="keyword">intptr_t</span>* dest, <span class="keyword">intptr_t</span> compare_value)</span></span>;</div><div class="line">  <span class="function"><span class="keyword">inline</span> <span class="keyword">static</span> <span class="keyword">void</span>*    <span class="title">cmpxchg_ptr</span><span class="params">(<span class="keyword">void</span>*    exchange_value, <span class="keyword">volatile</span> <span class="keyword">void</span>*     dest, <span class="keyword">void</span>*    compare_value)</span></span>;</div><div class="line">&#125;;</div></pre></td></tr></table></figure></p>
+<h2 id="Store-操作"><a href="#Store-操作" class="headerlink" title="Store 操作"></a>Store 操作</h2><p>store作为赋值动作，定义了很多类似的操作，每一类操作对应一种场景，store类的操作实现如下，我们先看看所有的此类操作的实现，然后一个个看：<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line">:hotspot\src\os_cpu\linux_x86\vm\atomic_linux_x86.<span class="keyword">inline</span>.hpp</div><div class="line"></div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store    (jbyte    store_value, jbyte*    dest) &#123; *dest = store_value; &#125;</div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store    (jshort   store_value, jshort*   dest) &#123; *dest = store_value; &#125;</div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store    (jint     store_value, jint*     dest) &#123; *dest = store_value; &#125;</div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store_ptr(<span class="keyword">intptr_t</span> store_value, <span class="keyword">intptr_t</span>* dest) &#123; *dest = store_value; &#125;</div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store_ptr(<span class="keyword">void</span>*    store_value, <span class="keyword">void</span>*     dest) &#123; *(<span class="keyword">void</span>**)dest = store_value; &#125;</div><div class="line"></div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store    (jbyte    store_value, <span class="keyword">volatile</span> jbyte*    dest) &#123; *dest = store_value; &#125;</div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store    (jshort   store_value, <span class="keyword">volatile</span> jshort*   dest) &#123; *dest = store_value; &#125;</div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store    (jint     store_value, <span class="keyword">volatile</span> jint*     dest) &#123; *dest = store_value; &#125;</div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store_ptr(<span class="keyword">intptr_t</span> store_value, <span class="keyword">volatile</span> <span class="keyword">intptr_t</span>* dest) &#123; *dest = store_value; &#125;</div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store_ptr(<span class="keyword">void</span>*    store_value, <span class="keyword">volatile</span> <span class="keyword">void</span>*     dest) &#123; *(<span class="keyword">void</span>* <span class="keyword">volatile</span> *)dest = store_value; &#125;</div></pre></td></tr></table></figure></p>
+<p>通过上面的定义，这些按操作都是都是内联函数，都会在编译的时候直接链入调用方。这里有一个地方需要注意的，我们先看内联函数<strong>Atomic::store</strong>。<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> Atomic::store    (jbyte    store_value, jbyte*    dest) &#123; *dest = store_value; &#125;</div></pre></td></tr></table></figure></p>
+<p>我们知道这个是一个单独的赋值语句，就是将对应的指针指向的内容赋值，经过g++ 没有经过任何优化编译后的汇编如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">0000000000400800 &lt;_ZN11Test_atomic4testEaPa&gt;:</div><div class="line">  400800:       55                      push   %rbp</div><div class="line">  400801:       48 89 e5                mov    %rsp,%rbp</div><div class="line">  400804:       48 83 ec 10             sub    $0x10,%rsp</div><div class="line">  400808:       89 f8                   mov    %edi,%eax</div><div class="line">  40080a:       48 89 75 f0             mov    %rsi,-0x10(%rbp)</div><div class="line">  40080e:       88 45 fc                mov    %al,-0x4(%rbp)</div><div class="line">  400811:       0f be 45 fc             movsbl -0x4(%rbp),%eax</div><div class="line">  400815:       48 8b 55 f0             mov    -0x10(%rbp),%rdx</div><div class="line">  400819:       48 89 d6                mov    %rdx,%rsi</div><div class="line">  40081c:       89 c7                   mov    %eax,%edi</div><div class="line">  40081e:       e8 bf 00 00 00          callq  4008e2 &lt;_ZN6Atomic5storeEaPa&gt;</div><div class="line">  400823:       c9                      leaveq </div><div class="line">  400824:       c3                      retq</div></pre></td></tr></table></figure></p>
+<p>如果代码没有经过任何优化(-O)，编译器不会自动内联，成为了一个单独的函数，函数是经过函数栈进行调用了，这就导致了多处理器以及多线程环境的这个方法不是原子的。<br>然后我们看看经过优化的版本：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">000000000040072c &lt;_ZN11Test_atomic4testEaPa&gt;:</div><div class="line">  40072c:       40 88 3e                mov    %dil,(%rsi)</div><div class="line">  40072f:       c3                      retq</div></pre></td></tr></table></figure></p>
+<p>可以知道编译器就是一个单指令的赋值语句，操作数为一个字节，和定义一致。通过rsi寄存器指向的内存地址赋值给dil寄存器，dil寄存器是esi/rsi寄存器的低八位。我们知道单指令store操作保证原子性。所以这个赋值操作是原子的。<br><strong>所以Atomic的原子操作只有在经过处理器优化后(-O)才能保证store操作的原子性。</strong>同时也提供了volatile对应的store版本。volatile对可变变量更加的安全。保证原子级的store。volatile指示符表示直接从内存取数据，禁止编译器做优化。<br>其他的几个操作只是操作类型不同。<br><strong>store_ptr</strong>是为指针赋值操作，即将dest指向的内容指向store_value。由于dest是指向指针的所以类型为(void**)。这种类型的因为没有类型，编译器将此类作为无类型处理，可以指向任何类型。</p>
+<h2 id="ADD"><a href="#ADD" class="headerlink" title="ADD"></a>ADD</h2><p>由于Add操作设计load store操作，也就是add操作先从内存中取数据，然后做Add操作，最后存储到内存中。这涉及到3个操作，在多处理器上这些操作就不是原子的了，所以需要Lock修饰符。<br><figure class="highlight"><table><tr><td class="code"><pre><div class="line">inline jint     Atomic::add    (jint     add_value, volatile jint*     dest) &#123;</div><div class="line">  jint addend = add_value;</div><div class="line">  int mp = os::is_MP();</div><div class="line">  __asm__ volatile (  LOCK_IF_MP(%3) "xaddl %0,(%2)"</div><div class="line">                    : "=r" (addend)</div><div class="line">                    : "0" (addend), "r" (dest), "r" (mp)</div><div class="line">                    : "cc", "memory");</div><div class="line">  return addend + add_value;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>参数0到2分别是”=r” (addend)，”0” (addend)，”r” (dest)，”r” (mp)<br>“=r” (addend)表示由编译器选择寄存器存储add_value<br> “0” (addend)表示和第一个参数一样<br>“r” (dest)表示由编译器选择寄存器存储dest<br>“r” (mp)表示由编译器选择寄存器存储mp，mp表示是否是多处理器</p>
+<hr>
+<p>下面是一些知识：<br>volatile描述符告诉编译器禁止优化。直接从内存读取。<br>memory描述符告知GCC：<br>-不要将该段内嵌汇编指令与前面的指令重新排序；也就是在执行内嵌汇编代码之前，它前面的指令都执行完毕 </p>
+<ul>
+<li>不要将变量缓存到寄存器，因为这段代码可能会用到内存变量，而这些内存变量会以不可预知的方式发生改变，因此GCC插入必要的代码先将缓存到寄存器的变量值写回内存，如果后面又访问这些变量，需要重新访问内存。<br>-如果汇编指令修改了内存，但是GCC 本身却察觉不到，因为在输出部分没有描述，此时就需要在修改描述部分增加“memory”，告诉GCC 内存已经被修改，GCC 得知这个信息后，就会在这段指令之前，插入必要的指令将前面因为优化Cache 到寄存器中的变量值先写回内存，如果以后又要使用这些变量再重新读取。<br>cc描述符告知gcc指令可能修改标志寄存器eflags/rflags<br>双引号的是约束字符，意思如下：<br>“m”,”v”,”o”:内存<br>“r”:gcc选择寄存器<br>“q”:rax，rbx，rcx，rdx之一<br>“i”,”h”:直接操作数<br>“E”,”f”:浮点数<br>“g”:任意<br>“a”,”b”,”c”,”d”:对应rax，rbx，rcx，rdx<br>“S”,”D”:rsi，rdi<br>“I”:常数(0-31)</li>
+</ul>
+<hr>
+<p>以下是这段代码的汇编指令：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">0000000000400738 &lt;_Z5test3iPVi&gt;:</div><div class="line">  400738:       b8 00 00 00 00          mov    $0x0,%eax</div><div class="line">  40073d:       83 f8 00                cmp    $0x0,%eax</div><div class="line">  400740:       74 01                   je     400743 &lt;_Z5test3iPVi+0xb&gt;</div><div class="line">  400742:       f0 0f c1 3e             lock xadd %edi,(%rsi)</div><div class="line">  400746:       c3                      retq   </div><div class="line">  400747:       90                      nop</div></pre></td></tr></table></figure></p>
+<p>没有优化的版本<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">0000000000400a04 &lt;_ZN6Atomic3addEiPVi&gt;:</div><div class="line">  400a04:       55                      push   %rbp</div><div class="line">  400a05:       48 89 e5                mov    %rsp,%rbp</div><div class="line">  400a08:       48 83 ec 20             sub    $0x20,%rsp</div><div class="line">  400a0c:       89 7d ec                mov    %edi,-0x14(%rbp)</div><div class="line">  400a0f:       48 89 75 e0             mov    %rsi,-0x20(%rbp)</div><div class="line">  400a13:       8b 45 ec                mov    -0x14(%rbp),%eax</div><div class="line">  400a16:       89 45 f8                mov    %eax,-0x8(%rbp)</div><div class="line">  400a19:       e8 06 fd ff ff          callq  400724 &lt;_ZL5is_MPv&gt;</div><div class="line">  400a1e:       0f b6 c0                movzbl %al,%eax</div><div class="line">  400a21:       89 45 fc                mov    %eax,-0x4(%rbp)</div><div class="line">  400a24:       8b 45 f8                mov    -0x8(%rbp),%eax</div><div class="line">  400a27:       48 8b 55 e0             mov    -0x20(%rbp),%rdx</div><div class="line">  400a2b:       8b 4d fc                mov    -0x4(%rbp),%ecx</div><div class="line">  400a2e:       83 f9 00                cmp    $0x0,%ecx</div><div class="line">  400a31:       74 01                   je     400a34 &lt;_ZN6Atomic3addEiPVi+0x30&gt;</div><div class="line">  400a33:       f0 0f c1 02             lock xadd %eax,(%rdx)</div><div class="line">  400a37:       89 45 f8                mov    %eax,-0x8(%rbp)</div><div class="line">  400a3a:       8b 45 ec                mov    -0x14(%rbp),%eax</div><div class="line">  400a3d:       8b 55 f8                mov    -0x8(%rbp),%edx</div><div class="line">  400a40:       8d 04 02                lea    (%rdx,%rax,1),%eax</div><div class="line">  400a43:       c9                      leaveq </div><div class="line">  400a44:       c3                      retq</div></pre></td></tr></table></figure></p>
+<p>我们通过没有优化的版本可以知道更下细致的过程。我们知道这个函数就是将一个操作数add到指定的内存上。在单处理器，进程切换都是在指令级的，所以在单处理器上可以保证原子性，但是在多处理器涉及的load，add，store三个操作可能在多处理器上并发执行，导致乱序。所以在多处理器的版本中，增加lock前缀。</p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/10/19/jvm-Atomic-1-md/" class="archive-article-date">
+  	<time datetime="2016-10-19T03:35:09.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-10-19</time>
+</a>
+      
+      
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+  
+    <a href="/2016/10/17/generator/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title"></div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="jvm-Atomic-1-md" data-title="JVM基础之Atomic类" data-url="http://yoursite.com/2016/10/19/jvm-Atomic-1-md/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2016 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/Hdfs/" style="font-size: 10px;">Hdfs</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a> <a href="/tags/OpenJDK/" style="font-size: 13.33px;">OpenJDK</a> <a href="/tags/Phoenix/" style="font-size: 10px;">Phoenix</a> <a href="/tags/algorithm/" style="font-size: 10px;">algorithm</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>
