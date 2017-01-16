@@ -126,62 +126,6 @@
       <div class="body-wrap">
         
   
-    <article id="post-jvm/string-intern" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <input type="hidden" class="isFancy" />
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/23/jvm/string-intern/">Java String Intern</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <a id="more"></a>
-<p>String.intern()在jdk7以后的实现。</p>
-<h2 id="String-intern"><a href="#String-intern" class="headerlink" title="String intern"></a>String intern</h2><figure class="highlight java"><table><tr><td class="code"><pre><div class="line"><span class="keyword">package</span> string;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test11</span> </span>&#123;</div><div class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</div><div class="line">		<span class="comment">//-----s0-----</span></div><div class="line">		<span class="comment">/**</span></div><div class="line">		 * 不要使用new String("aaaaa")此类;</div><div class="line">		 * 可以使用s01 = "aaaaa";</div><div class="line">		 * 可以节约内存</div><div class="line">		 */</div><div class="line">		<span class="comment">//建立两个对象，"aaaaa"在符号表中，s00指向的对象在堆中</span></div><div class="line">		String s00 = <span class="keyword">new</span> String(<span class="string">"aaaaa"</span>);</div><div class="line">		String s01 = <span class="string">"aaaaa"</span>;</div><div class="line">		<span class="comment">//false,由于s00中建立了两个字符串对象，第一个是"aaaaa"，第二个才是new的,s00指向new的,s00.intern()指向第一個在符号表的对象</span></div><div class="line">		System.out.println(<span class="string">"s00.intern() == s00:"</span>+(s00.intern() == s00));</div><div class="line">		<span class="comment">//true</span></div><div class="line">		System.out.println(<span class="string">"s01.intern() == s01:"</span>+(s01.intern() == s01));</div><div class="line"></div><div class="line">		</div><div class="line">		<span class="comment">//-----s1-----</span></div><div class="line">		<span class="comment">/**</span></div><div class="line">		 * 使用常量拼接会比使用StringBuilder效率更高(编译器可以确定为常量)</div><div class="line">		 * 对于不确定是常量的字符串拼接，还是老老实实的使用StringBuilder</div><div class="line">		 */</div><div class="line">		<span class="comment">//在符号表建立"aaabb"。javac会优化此类方式</span></div><div class="line">		String s10 = <span class="string">"aaa"</span> + <span class="string">"bb"</span>;</div><div class="line">		<span class="keyword">final</span> String s11 =  <span class="string">"aaa"</span>;</div><div class="line">		String s12 = s11 + <span class="string">"bb"</span>;</div><div class="line">		String s13 = <span class="string">"aaa"</span>;</div><div class="line">		String s14 = s13+<span class="string">"bb"</span>;</div><div class="line">		String s15 = <span class="keyword">new</span> String(<span class="string">"aaa"</span>) + <span class="string">"bb"</span>;</div><div class="line">		<span class="comment">//true</span></div><div class="line">		System.out.println(<span class="string">"s10 == s12:"</span>+ (s10 == s12));</div><div class="line">		<span class="comment">//false,由于编译器无法确定为常量,所以不会优化,s14是在堆中新建的字符串，所以和和s10不一样</span></div><div class="line">		System.out.println(<span class="string">"s14 == s10:"</span>+ (s14 == s10));</div><div class="line">		<span class="comment">//false,同上</span></div><div class="line">		System.out.println(<span class="string">"s15 == s10:"</span>+ (s15 == s10));</div><div class="line">		</div><div class="line">		<span class="comment">/**</span></div><div class="line">		 * intern根据不同的jdk版本不一样，下面的结果jdk6和jdk7是不一样的，描述适用于jdk7.</div><div class="line">		 * 合理使用intern,可以减少内存使用</div><div class="line">		 */</div><div class="line">		<span class="comment">//-----s2-----</span></div><div class="line">		String s20 = <span class="keyword">new</span> StringBuilder(<span class="string">"z"</span>).append(<span class="string">".AccessibleObject"</span>).toString(); <span class="comment">//new string object</span></div><div class="line">		String s21 = <span class="keyword">new</span> StringBuilder(<span class="string">"z"</span>).append(<span class="string">".AccessibleObject"</span>).toString(); <span class="comment">//new string object</span></div><div class="line">		String s22 = <span class="keyword">new</span> StringBuilder(<span class="string">"jav"</span>).append(<span class="string">"a.lang.String"</span>).toString();<span class="comment">//old stringtable</span></div><div class="line">		<span class="comment">//true，intern如果字符串表没有这个字符串，则建立字符串表到这个对象的映射,所以这里s20.intern指向的是s20</span></div><div class="line">		System.out.println(<span class="string">"s20.intern() == s20:"</span>+(s20.intern() == s20));</div><div class="line">		<span class="comment">//true，同上</span></div><div class="line">		System.out.println(<span class="string">"s20 == s21.intern():"</span>+(s20 == s21.intern()));</div><div class="line">		<span class="comment">//由于虚拟机已经池化了这个字符串,所以intern指向的是虚拟机的字符串对象，而不是s22</span></div><div class="line">		System.out.println(<span class="string">"a2.intern() == a2:"</span>+(s22.intern() == s22));</div><div class="line">		</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      <a href="/2016/09/23/jvm/string-intern/" class="archive-article-date">
-  	<time datetime="2016-09-23T03:30:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
-</a>
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags"></i>
-		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
-	</div>
-
-      
-	<div class="article-category tagcloud">
-	<i class="icon-price-tags"></i>
-	<a class="article-category-link" href="/categories/JAVA/">JAVA</a>
-	</div>
-
-
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-
-
-
-
-
-
-
-
-
-  
     <article id="post-jvm/symbol-table-1" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -239,7 +183,7 @@
 
 
   
-    <article id="post-jvm/java-xx-command-NativeMemoryTracking" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-jvm/jvm-hash-1" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <input type="hidden" class="isFancy" />
@@ -249,7 +193,7 @@
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/23/jvm/java-xx-command-NativeMemoryTracking/">Java 命令行---（NativeMemoryTracking）</a>
+      <a class="article-title" href="/2016/09/23/jvm/jvm-hash-1/">JVM之Hash算法</a>
     </h1>
   
 
@@ -258,13 +202,14 @@
     <div class="article-entry" itemprop="articleBody">
       
         <a id="more"></a>
-<p>JVM提供了详细追踪内存使用的工具，文中详细描述-XX:+NativeMemoryTracking的作用，设计，使用等范围。</p>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>虚拟机中重要的算法之一。虚拟机采用Murmur3算法。</p>
+<h2 id="虚拟机中的Hash算法"><a href="#虚拟机中的Hash算法" class="headerlink" title="虚拟机中的Hash算法"></a>虚拟机中的Hash算法</h2><p>虚拟机中采用的Hash算法是Murmur3，Murmur3算法是高运算性能，低碰撞率，由Austin Appleby创建于2008年，现已应用到Hadoop、libstdc++、nginx、libmemcached等开源系统。2011年Appleby被Google雇佣，随后Google推出其变种的CityHash算法。<br>目前Murmur3官方实现版本已经迁移到github上，地址<a href="https://github.com/aappleby/smhasher" target="_blank" rel="external">https://github.com/aappleby/smhasher</a></p>
 
       
     </div>
     <div class="article-info article-info-index">
       
-      <a href="/2016/09/23/jvm/java-xx-command-NativeMemoryTracking/" class="archive-article-date">
+      <a href="/2016/09/23/jvm/jvm-hash-1/" class="archive-article-date">
   	<time datetime="2016-09-23T03:30:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
 </a>
       
@@ -295,7 +240,7 @@
 
 
   
-    <article id="post-jvm/jvm-hash-1" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-jvm/java-xx-command" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <input type="hidden" class="isFancy" />
@@ -305,7 +250,7 @@
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/23/jvm/jvm-hash-1/">JVM之Hash算法</a>
+      <a class="article-title" href="/2016/09/23/jvm/java-xx-command/">Java 命令行---XX详解</a>
     </h1>
   
 
@@ -313,15 +258,15 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <a id="more"></a>
-<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>虚拟机中重要的算法之一。虚拟机采用Murmur3算法。</p>
-<h2 id="虚拟机中的Hash算法"><a href="#虚拟机中的Hash算法" class="headerlink" title="虚拟机中的Hash算法"></a>虚拟机中的Hash算法</h2><p>虚拟机中采用的Hash算法是Murmur3，Murmur3算法是高运算性能，低碰撞率，由Austin Appleby创建于2008年，现已应用到Hadoop、libstdc++、nginx、libmemcached等开源系统。2011年Appleby被Google雇佣，随后Google推出其变种的CityHash算法。<br>目前Murmur3官方实现版本已经迁移到github上，地址<a href="https://github.com/aappleby/smhasher" target="_blank" rel="external">https://github.com/aappleby/smhasher</a></p>
-
+        <p>描述Java命令行的相关命令以及用法，说明等。<br>
+        <p class="article-more-link">
+          <a  href="/2016/09/23/jvm/java-xx-command/#more">more >></a>
+        </p>
       
     </div>
     <div class="article-info article-info-index">
       
-      <a href="/2016/09/23/jvm/jvm-hash-1/" class="archive-article-date">
+      <a href="/2016/09/23/jvm/java-xx-command/" class="archive-article-date">
   	<time datetime="2016-09-23T03:30:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
 </a>
       
@@ -524,7 +469,7 @@
 
 
   
-    <article id="post-jvm/classloader" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-jvm/string-intern" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <input type="hidden" class="isFancy" />
@@ -534,7 +479,7 @@
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2016/09/23/jvm/classloader/">JVM ClassLoader机制</a>
+      <a class="article-title" href="/2016/09/23/jvm/string-intern/">Java String Intern</a>
     </h1>
   
 
@@ -542,15 +487,70 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>介绍Java虚拟机ClassLoader的机制，实现以及各种应用场景，重点介绍了默认加载体系和tomcat的加载体系。osgi体系没有介绍。</p>
-        <p class="article-more-link">
-          <a  href="/2016/09/23/jvm/classloader/#more">more >></a>
-        </p>
+        <a id="more"></a>
+<p>String.intern()在jdk7以后的实现。</p>
+<h2 id="String-intern"><a href="#String-intern" class="headerlink" title="String intern"></a>String intern</h2><figure class="highlight java"><table><tr><td class="code"><pre><div class="line"><span class="keyword">package</span> string;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test11</span> </span>&#123;</div><div class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</div><div class="line">		<span class="comment">//-----s0-----</span></div><div class="line">		<span class="comment">/**</span></div><div class="line">		 * 不要使用new String("aaaaa")此类;</div><div class="line">		 * 可以使用s01 = "aaaaa";</div><div class="line">		 * 可以节约内存</div><div class="line">		 */</div><div class="line">		<span class="comment">//建立两个对象，"aaaaa"在符号表中，s00指向的对象在堆中</span></div><div class="line">		String s00 = <span class="keyword">new</span> String(<span class="string">"aaaaa"</span>);</div><div class="line">		String s01 = <span class="string">"aaaaa"</span>;</div><div class="line">		<span class="comment">//false,由于s00中建立了两个字符串对象，第一个是"aaaaa"，第二个才是new的,s00指向new的,s00.intern()指向第一個在符号表的对象</span></div><div class="line">		System.out.println(<span class="string">"s00.intern() == s00:"</span>+(s00.intern() == s00));</div><div class="line">		<span class="comment">//true</span></div><div class="line">		System.out.println(<span class="string">"s01.intern() == s01:"</span>+(s01.intern() == s01));</div><div class="line"></div><div class="line">		</div><div class="line">		<span class="comment">//-----s1-----</span></div><div class="line">		<span class="comment">/**</span></div><div class="line">		 * 使用常量拼接会比使用StringBuilder效率更高(编译器可以确定为常量)</div><div class="line">		 * 对于不确定是常量的字符串拼接，还是老老实实的使用StringBuilder</div><div class="line">		 */</div><div class="line">		<span class="comment">//在符号表建立"aaabb"。javac会优化此类方式</span></div><div class="line">		String s10 = <span class="string">"aaa"</span> + <span class="string">"bb"</span>;</div><div class="line">		<span class="keyword">final</span> String s11 =  <span class="string">"aaa"</span>;</div><div class="line">		String s12 = s11 + <span class="string">"bb"</span>;</div><div class="line">		String s13 = <span class="string">"aaa"</span>;</div><div class="line">		String s14 = s13+<span class="string">"bb"</span>;</div><div class="line">		String s15 = <span class="keyword">new</span> String(<span class="string">"aaa"</span>) + <span class="string">"bb"</span>;</div><div class="line">		<span class="comment">//true</span></div><div class="line">		System.out.println(<span class="string">"s10 == s12:"</span>+ (s10 == s12));</div><div class="line">		<span class="comment">//false,由于编译器无法确定为常量,所以不会优化,s14是在堆中新建的字符串，所以和和s10不一样</span></div><div class="line">		System.out.println(<span class="string">"s14 == s10:"</span>+ (s14 == s10));</div><div class="line">		<span class="comment">//false,同上</span></div><div class="line">		System.out.println(<span class="string">"s15 == s10:"</span>+ (s15 == s10));</div><div class="line">		</div><div class="line">		<span class="comment">/**</span></div><div class="line">		 * intern根据不同的jdk版本不一样，下面的结果jdk6和jdk7是不一样的，描述适用于jdk7.</div><div class="line">		 * 合理使用intern,可以减少内存使用</div><div class="line">		 */</div><div class="line">		<span class="comment">//-----s2-----</span></div><div class="line">		String s20 = <span class="keyword">new</span> StringBuilder(<span class="string">"z"</span>).append(<span class="string">".AccessibleObject"</span>).toString(); <span class="comment">//new string object</span></div><div class="line">		String s21 = <span class="keyword">new</span> StringBuilder(<span class="string">"z"</span>).append(<span class="string">".AccessibleObject"</span>).toString(); <span class="comment">//new string object</span></div><div class="line">		String s22 = <span class="keyword">new</span> StringBuilder(<span class="string">"jav"</span>).append(<span class="string">"a.lang.String"</span>).toString();<span class="comment">//old stringtable</span></div><div class="line">		<span class="comment">//true，intern如果字符串表没有这个字符串，则建立字符串表到这个对象的映射,所以这里s20.intern指向的是s20</span></div><div class="line">		System.out.println(<span class="string">"s20.intern() == s20:"</span>+(s20.intern() == s20));</div><div class="line">		<span class="comment">//true，同上</span></div><div class="line">		System.out.println(<span class="string">"s20 == s21.intern():"</span>+(s20 == s21.intern()));</div><div class="line">		<span class="comment">//由于虚拟机已经池化了这个字符串,所以intern指向的是虚拟机的字符串对象，而不是s22</span></div><div class="line">		System.out.println(<span class="string">"a2.intern() == a2:"</span>+(s22.intern() == s22));</div><div class="line">		</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
       
     </div>
     <div class="article-info article-info-index">
       
-      <a href="/2016/09/23/jvm/classloader/" class="archive-article-date">
+      <a href="/2016/09/23/jvm/string-intern/" class="archive-article-date">
+  	<time datetime="2016-09-23T03:30:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/JAVA/">JAVA</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+
+
+
+
+
+
+
+
+
+  
+    <article id="post-jvm/java-xx-command-NativeMemoryTracking" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2016/09/23/jvm/java-xx-command-NativeMemoryTracking/">Java 命令行---（NativeMemoryTracking）</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <a id="more"></a>
+<p>JVM提供了详细追踪内存使用的工具，文中详细描述-XX:+NativeMemoryTracking的作用，设计，使用等范围。</p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/23/jvm/java-xx-command-NativeMemoryTracking/" class="archive-article-date">
   	<time datetime="2016-09-23T03:30:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
 </a>
       
