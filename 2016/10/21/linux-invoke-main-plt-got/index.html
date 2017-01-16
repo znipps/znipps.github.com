@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>Linux 动态链接过程 | Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="文中描述了动态链接的详细过程，基于x86_amd64平台。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux 动态链接过程">
+<meta property="og:url" content="http://yoursite.com/2016/10/21/linux-invoke-main-plt-got/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="文中描述了动态链接的详细过程，基于x86_amd64平台。">
+<meta property="og:updated_time" content="2016-10-24T01:13:39.136Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux 动态链接过程">
+<meta name="twitter:description" content="文中描述了动态链接的详细过程，基于x86_amd64平台。">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-linux-invoke-main-plt-got" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Linux 动态链接过程
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>文中描述了动态链接的详细过程，基于x86_amd64平台。<br><a id="more"></a></p>
+<h2 id="动态链接"><a href="#动态链接" class="headerlink" title="动态链接"></a>动态链接</h2><h2 id="内核加载可执行程序"><a href="#内核加载可执行程序" class="headerlink" title="内核加载可执行程序"></a>内核加载可执行程序</h2><p>内核加载可执行程序做一些基本检查后，查找程序头为PT_INTERP的头，也就是解释器的路径。<br>注意INTERP的头，内核会检查GNU_STACK头，查看是否可以在栈中执行指令。<br>内核加载可执行程序的时候从sesction为.interp中读取解释器<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">objdump -s -j .interp a.out</div><div class="line"></div><div class="line">Contents of section .interp:</div><div class="line"> 400200 2f6c6962 36342f6c 642d6c69 6e75782d  /lib64/ld-linux-</div><div class="line"> 400210 7838362d 36342e73 6f2e3200           x86-64.so.2.</div></pre></td></tr></table></figure></p>
+<p>先看看可执行程序的头：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">readelf -l a.out</div><div class="line">Program Headers:</div><div class="line">  Type           Offset             VirtAddr           PhysAddr</div><div class="line">                 FileSiz            MemSiz              Flags  Align</div><div class="line">  PHDR           0x0000000000000040 0x0000000000400040 0x0000000000400040</div><div class="line">                 0x00000000000001c0 0x00000000000001c0  R E    8</div><div class="line">  INTERP         0x0000000000000200 0x0000000000400200 0x0000000000400200</div><div class="line">                 0x000000000000001c 0x000000000000001c  R      1</div><div class="line">      [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]</div><div class="line">  LOAD           0x0000000000000000 0x0000000000400000 0x0000000000400000</div><div class="line">                 0x00000000000006b4 0x00000000000006b4  R E    200000</div><div class="line">  LOAD           0x00000000000006b8 0x00000000006006b8 0x00000000006006b8</div><div class="line">                 0x00000000000001ec 0x0000000000000200  RW     200000</div><div class="line">  DYNAMIC        0x00000000000006e0 0x00000000006006e0 0x00000000006006e0</div><div class="line">                 0x0000000000000190 0x0000000000000190  RW     8</div><div class="line">  NOTE           0x000000000000021c 0x000000000040021c 0x000000000040021c</div><div class="line">                 0x0000000000000044 0x0000000000000044  R      4</div><div class="line">  GNU_EH_FRAME   0x00000000000005e8 0x00000000004005e8 0x00000000004005e8</div><div class="line">                 0x000000000000002c 0x000000000000002c  R      4</div><div class="line">  GNU_STACK      0x0000000000000000 0x0000000000000000 0x0000000000000000</div><div class="line">                 0x0000000000000000 0x0000000000000000  RW     8</div></pre></td></tr></table></figure></p>
+<p>然后内核会通过加载LOAD的头进行内存映射，如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">cat /proc/12350/maps</div><div class="line"></div><div class="line">00400000-00401000 r-xp 00000000 08:08 8913487                            /opt/workspace/test_new/a.out</div><div class="line">00600000-00601000 rw-p 00000000 08:08 8913487                            /opt/workspace/test_new/a.out</div><div class="line">332c400000-332c420000 r-xp 00000000 08:03 61                             /lib64/ld-2.12.so</div><div class="line">332c61f000-332c620000 r--p 0001f000 08:03 61                             /lib64/ld-2.12.so</div><div class="line">332c620000-332c621000 rw-p 00020000 08:03 61                             /lib64/ld-2.12.so</div><div class="line">332c621000-332c622000 rw-p 00000000 00:00 0 </div><div class="line">332c800000-332c98a000 r-xp 00000000 08:03 14814                          /lib64/libc-2.12.so</div><div class="line">332c98a000-332cb8a000 ---p 0018a000 08:03 14814                          /lib64/libc-2.12.so</div><div class="line">332cb8a000-332cb8e000 r--p 0018a000 08:03 14814                          /lib64/libc-2.12.so</div><div class="line">332cb8e000-332cb8f000 rw-p 0018e000 08:03 14814                          /lib64/libc-2.12.so</div><div class="line">332cb8f000-332cb94000 rw-p 00000000 00:00 0 </div><div class="line">7ffff7fea000-7ffff7fed000 rw-p 00000000 00:00 0 </div><div class="line">7ffff7ffd000-7ffff7ffe000 rw-p 00000000 00:00 0 </div><div class="line">7ffff7ffe000-7ffff7fff000 r-xp 00000000 00:00 0                          [vdso]</div><div class="line">7ffffffea000-7ffffffff000 rw-p 00000000 00:00 0                          [stack]</div><div class="line">ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]</div></pre></td></tr></table></figure></p>
+<p>我们在之前的头中看到LOAD的头如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">LOAD           0x0000000000000000 0x0000000000400000 0x0000000000400000</div><div class="line">               0x00000000000006b4 0x00000000000006b4  R E    200000</div><div class="line">LOAD           0x00000000000006b8 0x00000000006006b8 0x00000000006006b8</div><div class="line">               0x00000000000001ec 0x0000000000000200  RW     200000</div></pre></td></tr></table></figure></p>
+<p>需要注意的是，内核取得虚拟内存地址是VirtAddr进行内存映射，将对应的头在文件中的内容映射到指定地址，第一个是0x0000000000400000，第二个是0x00000000006006b8。和mapping中一致，LOAD的对齐地址是0x200000，内存页的对齐地址为0x1000(4KB)。所以结束和起始地址会做对齐操作。</p>
+<p>后续加载解释器，看看解释器ld-2.12.so的头：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">Program Headers:</div><div class="line">  Type           Offset             VirtAddr           PhysAddr</div><div class="line">                 FileSiz            MemSiz              Flags  Align</div><div class="line">  LOAD           0x0000000000000000 0x000000332c400000 0x000000332c400000</div><div class="line">                 0x000000000001f388 0x000000000001f388  R E    200000</div><div class="line">  LOAD           0x000000000001fb60 0x000000332c61fb60 0x000000332c61fb60</div><div class="line">                 0x0000000000001448 0x0000000000001628  RW     200000</div><div class="line">  DYNAMIC        0x000000000001fdf0 0x000000332c61fdf0 0x000000332c61fdf0</div><div class="line">                 0x0000000000000190 0x0000000000000190  RW     8</div><div class="line">  NOTE           0x00000000000001c8 0x000000332c4001c8 0x000000332c4001c8</div><div class="line">                 0x0000000000000024 0x0000000000000024  R      4</div><div class="line">  GNU_EH_FRAME   0x000000000001cd24 0x000000332c41cd24 0x000000332c41cd24</div><div class="line">                 0x000000000000060c 0x000000000000060c  R      4</div><div class="line">  GNU_STACK      0x0000000000000000 0x0000000000000000 0x0000000000000000</div><div class="line">                 0x0000000000000000 0x0000000000000000  RW     8</div><div class="line">  GNU_RELRO      0x000000000001fb60 0x000000332c61fb60 0x000000332c61fb60</div><div class="line">                 0x00000000000004a0 0x00000000000004a0  R      1</div></pre></td></tr></table></figure></p>
+<p>LOAD的加载和之前一样。注意ld没有INTERP头。<br>看看ld的头：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">ELF Header:</div><div class="line">  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00 </div><div class="line">  Class:                             ELF64</div><div class="line">  Data:                              2&apos;s complement, little endian</div><div class="line">  Version:                           1 (current)</div><div class="line">  OS/ABI:                            UNIX - System V</div><div class="line">  ABI Version:                       0</div><div class="line">  Type:                              DYN (Shared object file)</div><div class="line">  Machine:                           Advanced Micro Devices X86-64</div><div class="line">  Version:                           0x1</div><div class="line">  Entry point address:               0x332c400b00</div><div class="line">  Start of program headers:          64 (bytes into file)</div><div class="line">  Start of section headers:          154952 (bytes into file)</div><div class="line">  Flags:                             0x0</div><div class="line">  Size of this header:               64 (bytes)</div><div class="line">  Size of program headers:           56 (bytes)</div><div class="line">  Number of program headers:         7</div><div class="line">  Size of section headers:           64 (bytes)</div><div class="line">  Number of section headers:         31</div><div class="line">  Section header string table index: 30</div></pre></td></tr></table></figure></p>
+<p>从上面可以看出执行的地址是0x332c400b00(某些情况下内核会调整真正执行的地址)。反编译ld后,重点看这段：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">objdump -d ld-2.12.so</div><div class="line"></div><div class="line">000000332c400b00 &lt;_start&gt;:</div><div class="line">  332c400b00:   48 89 e7                mov    %rsp,%rdi</div><div class="line">  332c400b03:   e8 28 06 00 00          callq  332c401130 &lt;_dl_start&gt;</div></pre></td></tr></table></figure></p>
+<p>从解释程序ld的头<strong>Entry point address</strong>属性，可以知道，首先执行的是ld的_start。然后_dl_start：<br>所以我们知道解释器的程序为/lib64/ld-linux-x86-64.so.2，这个程序负责对加载的可执行程序进行解释。<br>解释器的其实地址是_dl_start,这个函数在glibc中。然后看一下这个程序,前面不看了，看重点，下面是_dl_start函数的部分代码：<br><figure class="highlight c"><table><tr><td class="code"><pre><div class="line">glibc<span class="number">-2.12</span><span class="number">.2</span>\elf\rtld.c:</div><div class="line"></div><div class="line">  <span class="comment">/* Figure out the run-time load address of the dynamic linker itself.  */</span></div><div class="line">  bootstrap_map.l_addr = elf_machine_load_address ();</div><div class="line"></div><div class="line">  <span class="comment">/* Read our own dynamic section and fill in the info array.  */</span></div><div class="line">  bootstrap_map.l_ld = (<span class="keyword">void</span> *) bootstrap_map.l_addr + elf_machine_dynamic ();</div><div class="line">  elf_get_dynamic_info (&amp;bootstrap_map, <span class="literal">NULL</span>);</div></pre></td></tr></table></figure></p>
+<p>先看第一个函数：<br><figure class="highlight c"><table><tr><td class="code"><pre><div class="line"><span class="keyword">static</span> <span class="keyword">inline</span> Elf64_Addr <span class="number">__</span>attribute__ ((unused))</div><div class="line">elf_machine_load_address (<span class="keyword">void</span>)</div><div class="line">&#123;</div><div class="line">  Elf64_Addr addr;</div><div class="line"></div><div class="line">  <span class="comment">/* The easy way is just the same as on x86:</span></div><div class="line">       leaq _dl_start, %0</div><div class="line">       leaq _dl_start(%%rip), %1</div><div class="line">       subq %0, %1</div><div class="line">     but this does not work with binutils since we then have</div><div class="line">     a R_X86_64_32S relocation in a shared lib.</div><div class="line"></div><div class="line">     Instead we store the address of _dl_start in the data section</div><div class="line">     and compare it with the current value that we can get via</div><div class="line">     an RIP relative addressing mode.  Note that this is the address</div><div class="line">     of _dl_start before any relocation performed at runtime.  In case</div><div class="line">     the binary is prelinked the resulting "address" is actually a</div><div class="line">     load offset which is zero if the binary was loaded at the address</div><div class="line">     it is prelinked for.  */</div><div class="line"></div><div class="line">  <span class="keyword">asm</span> (<span class="string">"leaq _dl_start(%%rip), %0\n\t"</span></div><div class="line">       <span class="string">"subq 1f(%%rip), %0\n\t"</span></div><div class="line">       <span class="string">".section\t.data.rel.ro\n"</span></div><div class="line">       <span class="string">"1:\t.quad _dl_start\n\t"</span></div><div class="line">       <span class="string">".previous\n\t"</span></div><div class="line">       : <span class="string">"=r"</span> (addr) : : <span class="string">"cc"</span>);</div><div class="line"></div><div class="line">  <span class="keyword">return</span> addr;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>备注描述的很清楚为什么这样做，我们这里主要介绍指令执行。在.data.rel.ro的section保存编译的_dl_start虚拟地址。真正做计算的时候通过%rip相对寻址得到_dl_start加载到内存的地址，然后减去编译的_dl_start虚拟地址，就是其偏移量。一般情况下，这个都返回0。<br>而第二个函数elf_machine_dynamic ()返回的是.dynamic的地址。加上偏移地址就是真正的内存加载地址。<br>我们现在知道了加载的偏移地址，dynamic部分的加载地址。继续看_dl_start：<br><figure class="highlight c"><table><tr><td class="code"><pre><div class="line">glibc<span class="number">-2.12</span><span class="number">.2</span>\elf\rtld.c:</div><div class="line"></div><div class="line">  elf_get_dynamic_info (&amp;bootstrap_map, <span class="literal">NULL</span>);</div><div class="line"></div><div class="line">glibc<span class="number">-2.12</span><span class="number">.2</span>\elf\dynamic-link.h:</div><div class="line"><span class="keyword">inline</span> <span class="keyword">void</span> <span class="number">__</span>attribute__ ((unused, always_inline))</div><div class="line">elf_get_dynamic_info (<span class="keyword">struct</span> link_map *l, ElfW(Dyn) *temp)</div><div class="line">&#123;</div><div class="line">  ElfW(Dyn) *dyn = l-&gt;l_ld;</div><div class="line">  ElfW(Dyn) **info;</div><div class="line"><span class="meta">#<span class="meta-keyword">if</span> __ELF_NATIVE_CLASS == 32</span></div><div class="line">  <span class="keyword">typedef</span> Elf32_Word d_tag_utype;</div><div class="line"><span class="meta">#<span class="meta-keyword">elif</span> __ELF_NATIVE_CLASS == 64</span></div><div class="line">  <span class="keyword">typedef</span> Elf64_Xword d_tag_utype;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> RTLD_BOOTSTRAP</span></div><div class="line">  <span class="keyword">if</span> (dyn == <span class="literal">NULL</span>)</div><div class="line">    <span class="keyword">return</span>;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line"></div><div class="line">  info = l-&gt;l_info;</div><div class="line"></div><div class="line">  <span class="keyword">while</span> (dyn-&gt;d_tag != DT_NULL)</div><div class="line">    &#123;</div><div class="line">      <span class="keyword">if</span> ((d_tag_utype) dyn-&gt;d_tag &lt; DT_NUM)</div><div class="line">	info[dyn-&gt;d_tag] = dyn;</div><div class="line">      <span class="keyword">else</span> <span class="keyword">if</span> (dyn-&gt;d_tag &gt;= DT_LOPROC &amp;&amp;</div><div class="line">	       dyn-&gt;d_tag &lt; DT_LOPROC + DT_THISPROCNUM)</div><div class="line">	info[dyn-&gt;d_tag - DT_LOPROC + DT_NUM] = dyn;</div><div class="line">      <span class="keyword">else</span> <span class="keyword">if</span> ((d_tag_utype) DT_VERSIONTAGIDX (dyn-&gt;d_tag) &lt; DT_VERSIONTAGNUM)</div><div class="line">	info[VERSYMIDX (dyn-&gt;d_tag)] = dyn;</div><div class="line">      <span class="keyword">else</span> <span class="keyword">if</span> ((d_tag_utype) DT_EXTRATAGIDX (dyn-&gt;d_tag) &lt; DT_EXTRANUM)</div><div class="line">	info[DT_EXTRATAGIDX (dyn-&gt;d_tag) + DT_NUM + DT_THISPROCNUM</div><div class="line">	     + DT_VERSIONTAGNUM] = dyn;</div><div class="line">      <span class="keyword">else</span> <span class="keyword">if</span> ((d_tag_utype) DT_VALTAGIDX (dyn-&gt;d_tag) &lt; DT_VALNUM)</div><div class="line">	info[DT_VALTAGIDX (dyn-&gt;d_tag) + DT_NUM + DT_THISPROCNUM</div><div class="line">	     + DT_VERSIONTAGNUM + DT_EXTRANUM] = dyn;</div><div class="line">      <span class="keyword">else</span> <span class="keyword">if</span> ((d_tag_utype) DT_ADDRTAGIDX (dyn-&gt;d_tag) &lt; DT_ADDRNUM)</div><div class="line">	info[DT_ADDRTAGIDX (dyn-&gt;d_tag) + DT_NUM + DT_THISPROCNUM</div><div class="line">	     + DT_VERSIONTAGNUM + DT_EXTRANUM + DT_VALNUM] = dyn;</div><div class="line">      ++dyn;</div><div class="line">    &#125;</div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> DL_RO_DYN_TEMP_CNT	8</span></div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> DL_RO_DYN_SECTION</span></div><div class="line">  <span class="comment">/* Don't adjust .dynamic unnecessarily.  */</span></div><div class="line">  <span class="keyword">if</span> (l-&gt;l_addr != <span class="number">0</span>)</div><div class="line">    &#123;</div><div class="line">      ElfW(Addr) l_addr = l-&gt;l_addr;</div><div class="line">      <span class="keyword">int</span> cnt = <span class="number">0</span>;</div><div class="line"></div><div class="line"><span class="meta"># <span class="meta-keyword">define</span> ADJUST_DYN_INFO(tag) \</span></div><div class="line">      do								      \</div><div class="line">	<span class="meta-keyword">if</span> (info[tag] != NULL)						      \</div><div class="line">	  &#123;								      \</div><div class="line">	    <span class="meta-keyword">if</span> (temp)							      \</div><div class="line">	      &#123;								      \</div><div class="line">		temp[cnt].d_tag = info[tag]-&gt;d_tag;			      \</div><div class="line">		temp[cnt].d_un.d_ptr = info[tag]-&gt;d_un.d_ptr + l_addr;	      \</div><div class="line">		info[tag] = temp + cnt++;				      \</div><div class="line">	      &#125;								      \</div><div class="line">	    <span class="meta-keyword">else</span>							      \</div><div class="line">	      info[tag]-&gt;d_un.d_ptr += l_addr;				      \</div><div class="line">	  &#125;								      \</div><div class="line">      while (0)</div><div class="line"></div><div class="line">      ADJUST_DYN_INFO (DT_HASH);</div><div class="line">      ADJUST_DYN_INFO (DT_PLTGOT);</div><div class="line">      ADJUST_DYN_INFO (DT_STRTAB);</div><div class="line">      ADJUST_DYN_INFO (DT_SYMTAB);</div><div class="line"><span class="meta"># <span class="meta-keyword">if</span> ! ELF_MACHINE_NO_RELA</span></div><div class="line">      ADJUST_DYN_INFO (DT_RELA);</div><div class="line"><span class="meta"># <span class="meta-keyword">endif</span></span></div><div class="line"><span class="meta"># <span class="meta-keyword">if</span> ! ELF_MACHINE_NO_REL</span></div><div class="line">      ADJUST_DYN_INFO (DT_REL);</div><div class="line"><span class="meta"># <span class="meta-keyword">endif</span></span></div><div class="line">      ADJUST_DYN_INFO (DT_JMPREL);</div><div class="line">      ADJUST_DYN_INFO (VERSYMIDX (DT_VERSYM));</div><div class="line">      ADJUST_DYN_INFO (DT_ADDRTAGIDX (DT_GNU_HASH) + DT_NUM + DT_THISPROCNUM</div><div class="line">		       + DT_VERSIONTAGNUM + DT_EXTRANUM + DT_VALNUM);</div><div class="line"><span class="meta"># <span class="meta-keyword">undef</span> ADJUST_DYN_INFO</span></div><div class="line">      assert (cnt &lt;= DL_RO_DYN_TEMP_CNT);</div><div class="line">    &#125;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">  <span class="keyword">if</span> (info[DT_PLTREL] != <span class="literal">NULL</span>)</div><div class="line">    &#123;</div><div class="line"><span class="meta">#<span class="meta-keyword">if</span> ELF_MACHINE_NO_RELA</span></div><div class="line">      assert (info[DT_PLTREL]-&gt;d_un.d_val == DT_REL);</div><div class="line"><span class="meta">#<span class="meta-keyword">elif</span> ELF_MACHINE_NO_REL</span></div><div class="line">      assert (info[DT_PLTREL]-&gt;d_un.d_val == DT_RELA);</div><div class="line"><span class="meta">#<span class="meta-keyword">else</span></span></div><div class="line">      assert (info[DT_PLTREL]-&gt;d_un.d_val == DT_REL</div><div class="line">	      || info[DT_PLTREL]-&gt;d_un.d_val == DT_RELA);</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">    &#125;</div><div class="line"><span class="meta">#<span class="meta-keyword">if</span> ! ELF_MACHINE_NO_RELA</span></div><div class="line">  <span class="keyword">if</span> (info[DT_RELA] != <span class="literal">NULL</span>)</div><div class="line">    assert (info[DT_RELAENT]-&gt;d_un.d_val == <span class="keyword">sizeof</span> (ElfW(Rela)));</div><div class="line"><span class="meta"># <span class="meta-keyword">endif</span></span></div><div class="line"><span class="meta"># <span class="meta-keyword">if</span> ! ELF_MACHINE_NO_REL</span></div><div class="line">  <span class="keyword">if</span> (info[DT_REL] != <span class="literal">NULL</span>)</div><div class="line">    assert (info[DT_RELENT]-&gt;d_un.d_val == <span class="keyword">sizeof</span> (ElfW(Rel)));</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> RTLD_BOOTSTRAP</span></div><div class="line">  <span class="comment">/* Only the bind now flags are allowed.  */</span></div><div class="line">  assert (info[VERSYMIDX (DT_FLAGS_1)] == <span class="literal">NULL</span></div><div class="line">	  || info[VERSYMIDX (DT_FLAGS_1)]-&gt;d_un.d_val == DF_1_NOW);</div><div class="line">  assert (info[DT_FLAGS] == <span class="literal">NULL</span></div><div class="line">	  || info[DT_FLAGS]-&gt;d_un.d_val == DF_BIND_NOW);</div><div class="line">  <span class="comment">/* Flags must not be set for ld.so.  */</span></div><div class="line">  assert (info[DT_RUNPATH] == <span class="literal">NULL</span>);</div><div class="line">  assert (info[DT_RPATH] == <span class="literal">NULL</span>);</div><div class="line"><span class="meta">#<span class="meta-keyword">else</span></span></div><div class="line">  <span class="keyword">if</span> (info[DT_FLAGS] != <span class="literal">NULL</span>)</div><div class="line">    &#123;</div><div class="line">      <span class="comment">/* Flags are used.  Translate to the old form where available.</span></div><div class="line">	 Since these l_info entries are only tested for NULL pointers it</div><div class="line">	 is ok if they point to the DT_FLAGS entry.  */</div><div class="line">      l-&gt;l_flags = info[DT_FLAGS]-&gt;d_un.d_val;</div><div class="line"></div><div class="line">      <span class="keyword">if</span> (l-&gt;l_flags &amp; DF_SYMBOLIC)</div><div class="line">	info[DT_SYMBOLIC] = info[DT_FLAGS];</div><div class="line">      <span class="keyword">if</span> (l-&gt;l_flags &amp; DF_TEXTREL)</div><div class="line">	info[DT_TEXTREL] = info[DT_FLAGS];</div><div class="line">      <span class="keyword">if</span> (l-&gt;l_flags &amp; DF_BIND_NOW)</div><div class="line">	info[DT_BIND_NOW] = info[DT_FLAGS];</div><div class="line">    &#125;</div><div class="line">  <span class="keyword">if</span> (info[VERSYMIDX (DT_FLAGS_1)] != <span class="literal">NULL</span>)</div><div class="line">    &#123;</div><div class="line">      l-&gt;l_flags_1 = info[VERSYMIDX (DT_FLAGS_1)]-&gt;d_un.d_val;</div><div class="line"></div><div class="line">      <span class="keyword">if</span> (l-&gt;l_flags_1 &amp; DF_1_NOW)</div><div class="line">	info[DT_BIND_NOW] = info[VERSYMIDX (DT_FLAGS_1)];</div><div class="line">    &#125;</div><div class="line">  <span class="keyword">if</span> (info[DT_RUNPATH] != <span class="literal">NULL</span>)</div><div class="line">    <span class="comment">/* If both RUNPATH and RPATH are given, the latter is ignored.  */</span></div><div class="line">    info[DT_RPATH] = <span class="literal">NULL</span>;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>前段就是根据elf规范加载dynamic。然后调节加载到内存的地址。后面就是做一些校验和赋值操作。</p>
+<h2 id="分析动态链接过程"><a href="#分析动态链接过程" class="headerlink" title="分析动态链接过程"></a>分析动态链接过程</h2><p>内核加载各类文件，elf文件的入口点为_start，linux建立一个单独的进程，指定可执行程序的入口点是_start，先看一个简单的例子：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">00000000004003e0 &lt;_start&gt;:</div><div class="line">  4003e0:	31 ed                	xor    %ebp,%ebp</div><div class="line">  4003e2:	49 89 d1             	mov    %rdx,%r9</div><div class="line">  4003e5:	5e                   	pop    %rsi</div><div class="line">  4003e6:	48 89 e2             	mov    %rsp,%rdx</div><div class="line">  4003e9:	48 83 e4 f0          	and    $0xfffffffffffffff0,%rsp</div><div class="line">  4003ed:	50                   	push   %rax</div><div class="line">  4003ee:	54                   	push   %rsp</div><div class="line">  4003ef:	49 c7 c0 f0 04 40 00 	mov    $0x4004f0,%r8</div><div class="line">  4003f6:	48 c7 c1 00 05 40 00 	mov    $0x400500,%rcx</div><div class="line">  4003fd:	48 c7 c7 ca 04 40 00 	mov    $0x4004ca,%rdi</div><div class="line">  400404:	e8 af ff ff ff       	callq  4003b8 &lt;__libc_start_main@plt&gt;</div><div class="line">  400409:	f4                   	hlt    </div><div class="line">  40040a:	90                   	nop</div><div class="line">  40040b:	90                   	nop</div></pre></td></tr></table></figure></p>
+<p>通过汇编指令，知道入口点程序调用的是<a href="&#109;&#x61;&#x69;&#x6c;&#116;&#x6f;&#58;&#x5f;&#x5f;&#x6c;&#x69;&#98;&#99;&#95;&#x73;&#116;&#97;&#114;&#x74;&#x5f;&#109;&#97;&#x69;&#110;&#64;&#112;&#108;&#116;">&#x5f;&#x5f;&#x6c;&#x69;&#98;&#99;&#95;&#x73;&#116;&#97;&#114;&#x74;&#x5f;&#109;&#97;&#x69;&#110;&#64;&#112;&#108;&#116;</a>符号链接，那这个地址在那边呢？<br>编译器gcc会生成在可执行的文件中生成一个.plt的section，这个section指向动态链接具体的寻址程序，gcc编译器并不知道我们需要对应符号的地址，这些地址都是通过ld程序进行寻址加载的。gcc增加了一个.plt的section来完成这个定位动态链接库或可执行程序对应符号在操作系统中的地址，也就是说这些地址是动态的。<br>所以，我们通过objdump -d -j .plt a.out 可以得到如下的信息：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">Disassembly of section .plt:</div><div class="line"></div><div class="line">00000000004003a8 &lt;__libc_start_main@plt-0x10&gt;:</div><div class="line">  4003a8:	ff 35 d2 04 20 00    	pushq  0x2004d2(%rip)        # 600880 &lt;_GLOBAL_OFFSET_TABLE_+0x8&gt;</div><div class="line">  4003ae:	ff 25 d4 04 20 00    	jmpq   *0x2004d4(%rip)        # 600888 &lt;_GLOBAL_OFFSET_TABLE_+0x10&gt;</div><div class="line">  4003b4:	0f 1f 40 00          	nopl   0x0(%rax)</div><div class="line"></div><div class="line">00000000004003b8 &lt;__libc_start_main@plt&gt;:</div><div class="line">  4003b8:	ff 25 d2 04 20 00    	jmpq   *0x2004d2(%rip)        # 600890 &lt;_GLOBAL_OFFSET_TABLE_+0x18&gt;</div><div class="line">  4003be:	68 00 00 00 00       	pushq  $0x0</div><div class="line">  4003c3:	e9 e0 ff ff ff       	jmpq   4003a8 &lt;_init+0x18&gt;</div><div class="line"></div><div class="line">00000000004003c8 &lt;time@plt&gt;:</div><div class="line">  4003c8:	ff 25 ca 04 20 00    	jmpq   *0x2004ca(%rip)        # 600898 &lt;_GLOBAL_OFFSET_TABLE_+0x20&gt;</div><div class="line">  4003ce:	68 01 00 00 00       	pushq  $0x1</div><div class="line">  4003d3:	e9 d0 ff ff ff       	jmpq   4003a8 &lt;_init+0x18&gt;</div></pre></td></tr></table></figure></p>
+<p>和具体调用的程序看，重点看<a href="&#109;&#x61;&#105;&#108;&#116;&#111;&#58;&#x5f;&#x5f;&#108;&#x69;&#98;&#x63;&#95;&#x73;&#x74;&#97;&#114;&#116;&#95;&#109;&#97;&#x69;&#x6e;&#x40;&#x70;&#108;&#116;">&#x5f;&#x5f;&#108;&#x69;&#98;&#x63;&#95;&#x73;&#x74;&#97;&#114;&#116;&#95;&#109;&#97;&#x69;&#x6e;&#x40;&#x70;&#108;&#116;</a>：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">00000000004003b8 &lt;__libc_start_main@plt&gt;:</div><div class="line">  4003b8:	ff 25 d2 04 20 00    	jmpq   *0x2004d2(%rip)        # 600890 &lt;_GLOBAL_OFFSET_TABLE_+0x18&gt;</div><div class="line">  4003be:	68 00 00 00 00       	pushq  $0x0</div><div class="line">  4003c3:	e9 e0 ff ff ff       	jmpq   4003a8 &lt;_init+0x18&gt;</div></pre></td></tr></table></figure></p>
+<p>第一段代码采用了x64的rip相对寻址，通过这个机制，我们的代码可以做成与具体地址无关的应用程序，先看看第一段指令具体的意思：<br>首先%rip表示当前执行指令的位置，即0x4003b8。而0x2004d2(%rip)这种间接寻址的写法是AT&amp;T的写法，在AT&amp;T的内存寻址写法为：disp(base, index, scale)【intel写法：[BASE+INDEX<em>SCALE+DISP]】。所以这里base=%rip，这里%rip表示执行完此指令后的下一条指令地址0x4003be，disp=0x2004d2，所以计算的内容为：0x4003be+0x2004d2=0x600890，正好是标注的内容。<br>其次，**jmpq   </em>0x2004d2(%rip)**整个指令表示的是从内存地址0x600890中取得8个字节，然后把这8个字节作为内存地址进行跳转，那么这个内存地址的内容是什么了？<br>这就引出了ld中的另外一个概念got，got可以看成一个字节数组，在x64系统中，元素大小是8byte，got中存放了具体对应函数的地址，可执行程序中的地址都是从这个字节数组中获取内存地址进行跳转的。<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">0000000000600878 &lt;_GLOBAL_OFFSET_TABLE_&gt;:</div><div class="line">  600878:	e0 06 60 00 00 00 00 00 00 00 00 00 00 00 00 00     ..`.............</div><div class="line">	...</div><div class="line">  600890:	be 03 40 00 00 00 00 00 ce 03 40 00 00 00 00 00     ..@.......@.....</div></pre></td></tr></table></figure></p>
+<p>上面就是got的内容，存放在.got.plt的section中，我们看看内存地址0x600890是什么内容，注意intel是字节序为小端，也就是说从低地址到高地址内容为：be 03 40 00 00 00 00 00，而真正在intel中加载表示的内容为0x00000000004003be。我们这样就知道jmpq其实跳转的地址是0x4003be，其实就是jmpq的下一条指令。我们刚刚不是说这个地方存放的应该是真正执行符号的地址，为什么是下一条指令的地址呢。<br>这正是ld设计的巧妙之处，我们继续往下看。<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">4003be:	68 00 00 00 00       	pushq  $0x0</div><div class="line">4003c3:	e9 e0 ff ff ff       	jmpq   4003a8 &lt;_init+0x18&gt;</div></pre></td></tr></table></figure></p>
+<p>这段指令就是将0压入栈。然后执行0x4003a8。通过之前的反编译，0x4003a8的内用也在.plt，这个是什么东东。<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">00000000004003a8 &lt;__libc_start_main@plt-0x10&gt;:</div><div class="line">  4003a8:	ff 35 d2 04 20 00    	pushq  0x2004d2(%rip)        # 600880 &lt;_GLOBAL_OFFSET_TABLE_+0x8&gt;</div><div class="line">  4003ae:	ff 25 d4 04 20 00    	jmpq   *0x2004d4(%rip)        # 600888 &lt;_GLOBAL_OFFSET_TABLE_+0x10&gt;</div><div class="line">  4003b4:	0f 1f 40 00          	nopl   0x0(%rax)</div></pre></td></tr></table></figure></p>
+<p>这个地址就是plt的第一个跳转函数，你会发现所有动态符号执行的都是这个地址的指令，为什么会这样？<br>plt的第一段指令都是一样，就是这段指令，我们可以猜测这段指令及其重要，一定和找到对应内存地址有关。<br>一步步来看，这段指令压入栈，然后执行jmpq指令。先看看这个时候栈的内容<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">[  ...  ]</div><div class="line">[   0   ]</div><div class="line">[   0   ]  </div><div class="line">[       ]  &lt;---rsp</div></pre></td></tr></table></figure></p>
+<p>上面栈是方法调用使用的，下面的是动态链接过程使用中压入的两个元素，一个是pushq  $0x0指令压入，一个是pushq  0x2004d2(%rip)压入。<br>然后就执行指令jmpq   *0x2004d4(%rip)，即内存地址0x600888，这个地方是什么呢？我们在gdb中看看：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">(gdb) x/20i 0x332c4147d0</div><div class="line">   0x332c4147d0 &lt;_dl_runtime_resolve&gt;:	sub    $0x38,%rsp</div><div class="line">   0x332c4147d4 &lt;_dl_runtime_resolve+4&gt;:	mov    %rax,(%rsp)</div><div class="line">   0x332c4147d8 &lt;_dl_runtime_resolve+8&gt;:	mov    %rcx,0x8(%rsp)</div><div class="line">   0x332c4147dd &lt;_dl_runtime_resolve+13&gt;:	mov    %rdx,0x10(%rsp)</div><div class="line">   0x332c4147e2 &lt;_dl_runtime_resolve+18&gt;:	mov    %rsi,0x18(%rsp)</div><div class="line">   0x332c4147e7 &lt;_dl_runtime_resolve+23&gt;:	mov    %rdi,0x20(%rsp)</div><div class="line">   0x332c4147ec &lt;_dl_runtime_resolve+28&gt;:	mov    %r8,0x28(%rsp)</div><div class="line">   0x332c4147f1 &lt;_dl_runtime_resolve+33&gt;:	mov    %r9,0x30(%rsp)</div><div class="line">   0x332c4147f6 &lt;_dl_runtime_resolve+38&gt;:	mov    0x40(%rsp),%rsi</div><div class="line">   0x332c4147fb &lt;_dl_runtime_resolve+43&gt;:	mov    0x38(%rsp),%rdi</div><div class="line">   0x332c414800 &lt;_dl_runtime_resolve+48&gt;:	callq  0x332c40df60 &lt;_dl_fixup&gt;</div><div class="line">   0x332c414805 &lt;_dl_runtime_resolve+53&gt;:	mov    %rax,%r11</div><div class="line">   0x332c414808 &lt;_dl_runtime_resolve+56&gt;:	mov    0x30(%rsp),%r9</div><div class="line">   0x332c41480d &lt;_dl_runtime_resolve+61&gt;:	mov    0x28(%rsp),%r8</div><div class="line">   0x332c414812 &lt;_dl_runtime_resolve+66&gt;:	mov    0x20(%rsp),%rdi</div><div class="line">   0x332c414817 &lt;_dl_runtime_resolve+71&gt;:	mov    0x18(%rsp),%rsi</div><div class="line">   0x332c41481c &lt;_dl_runtime_resolve+76&gt;:	mov    0x10(%rsp),%rdx</div><div class="line">   0x332c414821 &lt;_dl_runtime_resolve+81&gt;:	mov    0x8(%rsp),%rcx</div><div class="line">   0x332c414826 &lt;_dl_runtime_resolve+86&gt;:	mov    (%rsp),%rax</div><div class="line">   0x332c41482a &lt;_dl_runtime_resolve+90&gt;:	add    $0x48,%rsp</div></pre></td></tr></table></figure></p>
+<p>内存地址0x332c4147d0是0x600888存放的内容。通过反编译的我们可以知道，0x600888即_dl_runtime_resolve的内存地址，那么这个内存地址什么时候放入的呢？又是用来干什么的呢？<br>先来看看_dl_runtime_resolve是干什么的，_dl_runtime_resolve的源代码在glibc中，有兴趣可以了解一下这个过程，这里从反编译角度看。<br>_dl_runtime_resolve上面的代码主要保存了上下文，需要重点看的是<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">0x332c4147f6 &lt;_dl_runtime_resolve+38&gt;:	mov    0x40(%rsp),%rsi</div><div class="line">0x332c4147fb &lt;_dl_runtime_resolve+43&gt;:	mov    0x38(%rsp),%rdi</div></pre></td></tr></table></figure></p>
+<p>执行上面的之后，栈中是什么样的，如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">[   ...   ]   &lt;---(rsp)</div><div class="line">[    0    ]   &lt;---0x40(rsp)  ;pushq  $0x0</div><div class="line">[    0    ]   &lt;---0x38(rsp)  ;pushq  0x2004d2(%rip)</div><div class="line">[   r9    ]   &lt;---0x30(rsp)  </div><div class="line">[   r8    ]   &lt;---0x28(rsp)</div><div class="line">[   rdi   ]   &lt;---0x20(rsp)</div><div class="line">[   rsi   ]   &lt;---0x18(rsp)</div><div class="line">[   rdx   ]   &lt;---0x10(rsp)    </div><div class="line">[   rcx   ]   &lt;---0x8(rsp)</div><div class="line">[   rax   ]   &lt;---rsp</div></pre></td></tr></table></figure></p>
+<p>上面的栈内容和指令一 一对应。然后调用_dl_fixup函数。</p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/10/21/linux-invoke-main-plt-got/" class="archive-article-date">
+  	<time datetime="2016-10-21T01:03:34.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-10-21</time>
+</a>
+      
+      
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2016/12/23/streamsets/sample_db_dcp/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          研发环境ODS201610分片tf_evt_cps_clr_list表导入DCP平台
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2016/10/19/jvm-Atomic-1-md/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">JVM基础之Atomic类</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="linux-invoke-main-plt-got" data-title="Linux 动态链接过程" data-url="http://yoursite.com/2016/10/21/linux-invoke-main-plt-got/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2017 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/Hdfs/" style="font-size: 13.33px;">Hdfs</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a> <a href="/tags/OpenJDK/" style="font-size: 13.33px;">OpenJDK</a> <a href="/tags/Phoenix/" style="font-size: 10px;">Phoenix</a> <a href="/tags/algorithm/" style="font-size: 16.67px;">algorithm</a> <a href="/tags/streamset/" style="font-size: 10px;">streamset</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>

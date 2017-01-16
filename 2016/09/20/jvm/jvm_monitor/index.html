@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>JVM之Monitor | Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="介绍虚拟机中Monitor的实现！">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JVM之Monitor">
+<meta property="og:url" content="http://yoursite.com/2016/09/20/jvm/jvm_monitor/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="介绍虚拟机中Monitor的实现！">
+<meta property="og:updated_time" content="2017-01-12T07:37:44.449Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="JVM之Monitor">
+<meta name="twitter:description" content="介绍虚拟机中Monitor的实现！">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-jvm/jvm_monitor" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      JVM之Monitor
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>介绍虚拟机中Monitor的实现！<br><a id="more"></a></p>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>JVM实现了自己的一套同步机制，monitor是其重要的一个基础框架。一个同步机制包含很多要素，主要包括：</p>
+<ul>
+<li>是否可重入</li>
+<li>是否可中断</li>
+<li>是否可限时</li>
+<li>是否公平</li>
+<li>性能</li>
+</ul>
+<h2 id="lock-without-safepoint-check"><a href="#lock-without-safepoint-check" class="headerlink" title="lock_without_safepoint_check"></a>lock_without_safepoint_check</h2><figure class="highlight c++"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\runtime\mutex.cpp:</div><div class="line"></div><div class="line"><span class="comment">// Lock without safepoint check - a degenerate variant of lock().</span></div><div class="line"><span class="comment">// Should ONLY be used by safepoint code and other code</span></div><div class="line"><span class="comment">// that is guaranteed not to block while running inside the VM. If this is called with</span></div><div class="line"><span class="comment">// thread state set to be in VM, the safepoint synchronization code will deadlock!</span></div><div class="line"></div><div class="line"><span class="keyword">void</span> Monitor::lock_without_safepoint_check (Thread * Self) &#123;</div><div class="line">  assert (<span class="number">_</span>owner != Self, <span class="string">"invariant"</span>) ;</div><div class="line">  ILock (Self) ;</div><div class="line">  assert (<span class="number">_</span>owner == <span class="literal">NULL</span>, <span class="string">"invariant"</span>);</div><div class="line">  set_owner (Self);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>如注释中，需要注意使用，否则会死锁，重点是ILock：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">// ILock and IWait are the lowest level primitive internal blocking</div><div class="line">// synchronization functions.  The callers of IWait and ILock must have</div><div class="line">// performed any needed state transitions beforehand.</div><div class="line">// IWait and ILock may directly call park() without any concern for thread state.</div><div class="line">// Note that ILock and IWait do *not* access _owner.</div><div class="line">// _owner is a higher-level logical concept.</div><div class="line"></div><div class="line">void Monitor::ILock (Thread * Self) &#123;</div><div class="line">  assert (_OnDeck != Self-&gt;_MutexEvent, &quot;invariant&quot;) ;</div><div class="line"></div><div class="line">  if (TryFast()) &#123;</div><div class="line"> Exeunt:</div><div class="line">    assert (ILocked(), &quot;invariant&quot;) ;</div><div class="line">    return ;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  ParkEvent * const ESelf = Self-&gt;_MutexEvent ;</div><div class="line">  assert (_OnDeck != ESelf, &quot;invariant&quot;) ;</div><div class="line"></div><div class="line">  // As an optimization, spinners could conditionally try to set ONDECK to _LBIT</div><div class="line">  // Synchronizer.cpp uses a similar optimization.</div><div class="line">  if (TrySpin (Self)) goto Exeunt ;</div><div class="line"></div><div class="line">  // Slow-path - the lock is contended.</div><div class="line">  // Either Enqueue Self on cxq or acquire the outer lock.</div><div class="line">  // LockWord encoding = (cxq,LOCKBYTE)</div><div class="line">  ESelf-&gt;reset() ;</div><div class="line">  OrderAccess::fence() ;</div><div class="line"></div><div class="line">  // Optional optimization ... try barging on the inner lock</div><div class="line">  if ((NativeMonitorFlags &amp; 32) &amp;&amp; CASPTR (&amp;_OnDeck, NULL, UNS(Self)) == 0) &#123;</div><div class="line">    goto OnDeck_LOOP ;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  if (AcquireOrPush (ESelf)) goto Exeunt ;</div><div class="line"></div><div class="line">  // At any given time there is at most one ondeck thread.</div><div class="line">  // ondeck implies not resident on cxq and not resident on EntryList</div><div class="line">  // Only the OnDeck thread can try to acquire -- contended for -- the lock.</div><div class="line">  // CONSIDER: use Self-&gt;OnDeck instead of m-&gt;OnDeck.</div><div class="line">  // Deschedule Self so that others may run.</div><div class="line">  while (_OnDeck != ESelf) &#123;</div><div class="line">    ParkCommon (ESelf, 0) ;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  // Self is now in the ONDECK position and will remain so until it</div><div class="line">  // manages to acquire the lock.</div><div class="line"> OnDeck_LOOP:</div><div class="line">  for (;;) &#123;</div><div class="line">    assert (_OnDeck == ESelf, &quot;invariant&quot;) ;</div><div class="line">    if (TrySpin (Self)) break ;</div><div class="line">    // CONSIDER: if ESelf-&gt;TryPark() &amp;&amp; TryLock() break ...</div><div class="line">    // It&apos;s probably wise to spin only if we *actually* blocked</div><div class="line">    // CONSIDER: check the lockbyte, if it remains set then</div><div class="line">    // preemptively drain the cxq into the EntryList.</div><div class="line">    // The best place and time to perform queue operations -- lock metadata --</div><div class="line">    // is _before having acquired the outer lock, while waiting for the lock to drop.</div><div class="line">    ParkCommon (ESelf, 0) ;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  assert (_OnDeck == ESelf, &quot;invariant&quot;) ;</div><div class="line">  _OnDeck = NULL ;</div><div class="line"></div><div class="line">  // Note that we current drop the inner lock (clear OnDeck) in the slow-path</div><div class="line">  // epilog immediately after having acquired the outer lock.</div><div class="line">  // But instead we could consider the following optimizations:</div><div class="line">  // A. Shift or defer dropping the inner lock until the subsequent IUnlock() operation.</div><div class="line">  //    This might avoid potential reacquisition of the inner lock in IUlock().</div><div class="line">  // B. While still holding the inner lock, attempt to opportunistically select</div><div class="line">  //    and unlink the next ONDECK thread from the EntryList.</div><div class="line">  //    If successful, set ONDECK to refer to that thread, otherwise clear ONDECK.</div><div class="line">  //    It&apos;s critical that the select-and-unlink operation run in constant-time as</div><div class="line">  //    it executes when holding the outer lock and may artificially increase the</div><div class="line">  //    effective length of the critical section.</div><div class="line">  // Note that (A) and (B) are tantamount to succession by direct handoff for</div><div class="line">  // the inner lock.</div><div class="line">  goto Exeunt ;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h2 id="TryFast"><a href="#TryFast" class="headerlink" title="TryFast"></a>TryFast</h2><p>先看看TryFast:<br><figure class="highlight c++"><table><tr><td class="code"><pre><div class="line"><span class="keyword">int</span> Monitor::TryFast () &#123;</div><div class="line">  <span class="comment">// Optimistic fast-path form ...</span></div><div class="line">  <span class="comment">// Fast-path attempt for the common uncontended case.</span></div><div class="line">  <span class="comment">// Avoid RTS-&gt;RTO $ coherence upgrade on typical SMP systems.</span></div><div class="line">  <span class="keyword">intptr_t</span> v = CASPTR (&amp;<span class="number">_L</span>ockWord, <span class="number">0</span>, <span class="number">_L</span>BIT) ;  <span class="comment">// agro ...  //检测地址是否已经被写入_LBIT</span></div><div class="line">  <span class="keyword">if</span> (v == <span class="number">0</span>) <span class="keyword">return</span> <span class="number">1</span> ;         <span class="comment">//没有写入说明，锁可用</span></div><div class="line">  <span class="comment">//此时v只能是1</span></div><div class="line">  <span class="keyword">for</span> (;;) &#123;</div><div class="line">    <span class="keyword">if</span> ((v &amp; <span class="number">_L</span>BIT) != <span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span> ;        <span class="comment">//此时锁不可用，检测一下，直接返回不可用</span></div><div class="line">    <span class="keyword">const</span> <span class="keyword">intptr_t</span> u = CASPTR (&amp;<span class="number">_L</span>ockWord, v, v|<span class="number">_L</span>BIT) ; <span class="comment">//不知道为什么这么写，这段不会被执行。</span></div><div class="line">    <span class="keyword">if</span> (v == u) <span class="keyword">return</span> <span class="number">1</span> ;</div><div class="line">    v = u ;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h2 id="TrySpin"><a href="#TrySpin" class="headerlink" title="TrySpin"></a>TrySpin</h2><p>虚拟机提供了一个选项来控制自选锁的运行，即NativeMonitorFlags。同时我们可以根据NativeMonitorSpinLimit参数控制自旋锁的自旋的次数。先看看NativeMonitorFlags结构：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">----------------------------------------------------------</div><div class="line">|                                     9|8|7|6|5|4|3|2|1|0|</div><div class="line">----------------------------------------------------------</div><div class="line">                                                  | | | |--</div><div class="line">                                                  | | |----Disable Delay</div><div class="line">                                                  | | |----</div><div class="line">                                                  | |------</div><div class="line">                                                  |--------Disable Pause</div></pre></td></tr></table></figure></p>
+<p>这个结构的描述，是我自定义的，可能和官方不一致：</p>
+<ol>
+<li>TODO</li>
+<li>Disable Delay标志，表示采用默认自旋锁，不做任何优化，即始终自旋，不做任何延迟操作</li>
+<li>Break Per Delay，表示在safepoint操作的时候，做好延迟操作后，退出自旋锁，只有这个标识为0时表示这个意思，也是默认的操作。</li>
+<li>Disable Pause标志位，表示采用底层Pause指令，自旋锁在进化的过程中经历了首先由直接修改共享内存地址实现锁，但是这种具有性能问题，底层处理器提供了Pause执行，这个指令从功耗和性能上具有的极大的提升。所以打开这个标志将会提升自旋锁的性能。</li>
+<li>TODO<figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">int Monitor::TrySpin (Thread * const Self) &#123;</div><div class="line">  if (TryLock())    return 1 ;</div><div class="line">  if (!os::is_MP()) return 0 ;</div><div class="line"></div><div class="line">  int Probes  = 0 ;</div><div class="line">  int Delay   = 0 ;</div><div class="line">  int Steps   = 0 ;</div><div class="line">  int SpinMax = NativeMonitorSpinLimit ;</div><div class="line">  int flgs    = NativeMonitorFlags ;</div><div class="line">  for (;;) &#123;</div><div class="line">    intptr_t v = _LockWord.FullWord;</div><div class="line">    if ((v &amp; _LBIT) == 0) &#123;         //做一个简单的检测，不可用直接往下执行</div><div class="line">      if (CASPTR (&amp;_LockWord, v, v|_LBIT) == v) &#123;   //锁可用</div><div class="line">        return 1 ;</div><div class="line">      &#125;</div><div class="line">      continue ;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    if ((flgs &amp; 8) == 0) &#123;</div><div class="line">      SpinPause () ;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    // Periodically increase Delay -- variable Delay form</div><div class="line">    // conceptually: delay *= 1 + 1/Exponent</div><div class="line">    ++ Probes;</div><div class="line">    if (Probes &gt; SpinMax) return 0 ;</div><div class="line"></div><div class="line">    if ((Probes &amp; 0x7) == 0) &#123;</div><div class="line">      Delay = ((Delay &lt;&lt; 1)|1) &amp; 0x7FF ;</div><div class="line">      // CONSIDER: Delay += 1 + (Delay/4); Delay &amp;= 0x7FF ;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    if (flgs &amp; 2) continue ;</div><div class="line"></div><div class="line">    // Consider checking _owner&apos;s schedctl state, if OFFPROC abort spin.</div><div class="line">    // If the owner is OFFPROC then it&apos;s unlike that the lock will be dropped</div><div class="line">    // in a timely fashion, which suggests that spinning would not be fruitful</div><div class="line">    // or profitable.</div><div class="line"></div><div class="line">    // Stall for &quot;Delay&quot; time units - iterations in the current implementation.</div><div class="line">    // Avoid generating coherency traffic while stalled.</div><div class="line">    // Possible ways to delay:</div><div class="line">    //   PAUSE, SLEEP, MEMBAR #sync, MEMBAR #halt,</div><div class="line">    //   wr %g0,%asi, gethrtime, rdstick, rdtick, rdtsc, etc. ...</div><div class="line">    // Note that on Niagara-class systems we want to minimize STs in the</div><div class="line">    // spin loop.  N1 and brethren write-around the L1$ over the xbar into the L2$.</div><div class="line">    // Furthermore, they don&apos;t have a W$ like traditional SPARC processors.</div><div class="line">    // We currently use a Marsaglia Shift-Xor RNG loop.</div><div class="line">    Steps += Delay ;</div><div class="line">    if (Self != NULL) &#123;</div><div class="line">      jint rv = Self-&gt;rng[0] ;</div><div class="line">      for (int k = Delay ; --k &gt;= 0; ) &#123;</div><div class="line">        rv = MarsagliaXORV (rv) ;</div><div class="line">        if ((flgs &amp; 4) == 0 &amp;&amp; SafepointSynchronize::do_call_back()) return 0 ;</div><div class="line">      &#125;</div><div class="line">      Self-&gt;rng[0] = rv ;</div><div class="line">    &#125; else &#123;</div><div class="line">      Stall (Delay) ;</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>在代码中，我们可以明确的知道，虚拟机自旋锁支持的操作如下：</p>
+<ol>
+<li>可以指定自旋锁的执行次数</li>
+<li>禁止采用优化的Pause指令</li>
+<li>禁止delay操作</li>
+<li>每次自旋锁执行一些额外的指令，这些指令都是在寄存器上操作，所以很快，降低访问共享内存，降低冲突。计算的额外指令次数计算方式为：((Delay &lt;&lt; 1)|1) &amp; 0x7FF，所以最大的次数是0x7FF。</li>
+</ol>
+<h2 id="TryLock"><a href="#TryLock" class="headerlink" title="TryLock"></a>TryLock</h2><p>这个锁很简单。<br><figure class="highlight c++"><table><tr><td class="code"><pre><div class="line"><span class="keyword">int</span> Monitor::TryLock () &#123;</div><div class="line">  <span class="keyword">intptr_t</span> v = <span class="number">_L</span>ockWord.FullWord ;  <span class="comment">//1. 获取锁的内容</span></div><div class="line">  <span class="keyword">for</span> (;;) &#123;</div><div class="line">    <span class="keyword">if</span> ((v &amp; <span class="number">_L</span>BIT) != <span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span> ;        <span class="comment">//2. 做一个检查，如果已经有线程持有这个锁，那么直接返回</span></div><div class="line">    <span class="keyword">const</span> <span class="keyword">intptr_t</span> u = CASPTR (&amp;<span class="number">_L</span>ockWord, v, v|<span class="number">_L</span>BIT) ;  <span class="comment">//3. 注意这里直接操作的是内存内容</span></div><div class="line">    <span class="keyword">if</span> (v == u) <span class="keyword">return</span> <span class="number">1</span> ; <span class="comment">//4.</span></div><div class="line">    v = u ; <span class="comment">//5.</span></div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<ol>
+<li>获取锁的内容</li>
+<li>做一个检查，如果已经有线程持有这个锁，那么直接返回</li>
+<li>说明此时v = 0，表明还没有持有这把锁，这个是一个竞争点，而CASPTR将内存地址内容和0比较，如果相等，那么替换为1，并且返回0。即 CASPTR (&amp;_LockWord, 0, 1)，这里是一个原子操作，所以不管是在单处理器和多处理器中，返回的都是对处理器可见的内容。</li>
+<li>如果返回的 v == u ，那么说明此线程获取的锁，并且返回，不相等的线程说明获取失败</li>
+<li>失败的线程执行此步骤，进入下一次循环，再一次执行2，此时，失败线程返回，说明获取锁失败。</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>spin lock的lock/unlock性能更好(花费更少的cpu指令)，但是它只适应用于临界区运行时间很短的场景。而在实际软件开发中，除非程序员对自己的程序的锁操作行为非常的了解，否则使用spin lock不是一个好主意(通常一个多线程程序中对锁的操作有数以万次，如果失败的锁操作(contended lock requests)过多的话就会浪费很多的时间进行空等待)。</p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/20/jvm/jvm_monitor/" class="archive-article-date">
+  	<time datetime="2016-09-20T00:47:34.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/JVM/">JVM</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2016/09/20/yarn-main/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          yarn_main
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2016/09/20/linux/linux-syscall/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Linux内核之系统调用</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="jvm/jvm_monitor" data-title="JVM之Monitor" data-url="http://yoursite.com/2016/09/20/jvm/jvm_monitor/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2017 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/Hdfs/" style="font-size: 13.33px;">Hdfs</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a> <a href="/tags/OpenJDK/" style="font-size: 13.33px;">OpenJDK</a> <a href="/tags/Phoenix/" style="font-size: 10px;">Phoenix</a> <a href="/tags/algorithm/" style="font-size: 16.67px;">algorithm</a> <a href="/tags/streamset/" style="font-size: 10px;">streamset</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>

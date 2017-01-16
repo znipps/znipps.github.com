@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>JVM之Safepoint | Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="介绍虚拟机中safepoint的重要性，以及相关的设计实现！">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JVM之Safepoint">
+<meta property="og:url" content="http://yoursite.com/2016/09/20/jvm/jvm_safepoint/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="介绍虚拟机中safepoint的重要性，以及相关的设计实现！">
+<meta property="og:updated_time" content="2017-01-13T01:56:33.283Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="JVM之Safepoint">
+<meta name="twitter:description" content="介绍虚拟机中safepoint的重要性，以及相关的设计实现！">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-jvm/jvm_safepoint" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      JVM之Safepoint
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>介绍虚拟机中safepoint的重要性，以及相关的设计实现！<br><a id="more"></a></p>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>Java虚拟机中有一个重要的概念，就是safepoint，从表面的名字意义上，我们可以知道，这个是关于线程安全的。safepoint在虚拟机中很重要，特别是gc中。它保证gc的语义实现。我们先介绍几本概念，然后一个个的介绍每一部分的设计。<br>safepoint在gc中很常见，也是stop-the-world的实现机制。进入safepoint，虚拟机保证只有VMThread线程运行，其他线程挂起，也就是说Java虚拟机的GC是通过VMThread作为主要进入点实现的。在Java虚拟机执行的指令有以下几个部分：</p>
+<ul>
+<li>解释器<br> Java虚拟机是解释器执行，虚拟机采用了模板解释器解释虚拟机执行的执行，那么在进入安全点，这个是比不可少的点，通过将解释器有_active_table修改为_safept_table实现。</li>
+<li>编译代码<br>Java虚拟机有一个版本叫hotspot，为了运行效率，虚拟机根据热点算法将热点的部分翻译成本地代码，那么从本地代码如何进入safepoint，也是需要考虑的部分。</li>
+<li>本地代码<br>Java虚拟机支持调用本地代码，那么如何从本地代码进入safepoint同样也是需要考虑的一部分。</li>
+<li>线程处于阻塞状态<br>Java虚拟机不允许唤醒虚拟机处于safepoint时唤醒处于Block状态的线程</li>
+<li>线程处于VM状态<br>Java虚拟机同样不允许虚拟机切换状态</li>
+</ul>
+<h2 id="解释器进入safepoint"><a href="#解释器进入safepoint" class="headerlink" title="解释器进入safepoint"></a>解释器进入safepoint</h2><p>Java虚拟机的字节码是解释执行的，如果我们需要将所有的线程stop，那么我们需要在字节码级做一些手脚，让执行字节码的线程进入block状态，让其不再运行，从而达到不再执行的目的，让虚拟机此时只有VMThread线程执行，从而达到stop-the-world的目的。Jvm通过修改字节码解释器的路由表实现这个目的。解释器进入safepoint这个模式是最简单的，Java虚拟机通过修改保留的_mem_serialize_page页，判断运行的线程是否需要进入safepoint。<br>我们通过代码一点点的看下去：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\runtime\safepoint.cpp:</div><div class="line"></div><div class="line">void SafepointSynchronize::begin() &#123;</div><div class="line">  Thread* myThread = Thread::current();</div><div class="line">  assert(myThread-&gt;is_VM_thread(), &quot;Only VM thread may execute a safepoint&quot;);</div><div class="line"></div><div class="line">  if (PrintSafepointStatistics || PrintSafepointStatisticsTimeout &gt; 0) &#123;</div><div class="line">    _safepoint_begin_time = os::javaTimeNanos();</div><div class="line">    _ts_of_current_safepoint = tty-&gt;time_stamp().seconds();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">#if INCLUDE_ALL_GCS</div><div class="line">  if (UseConcMarkSweepGC) &#123;</div><div class="line">    // In the future we should investigate whether CMS can use the</div><div class="line">    // more-general mechanism below.  DLD (01/05).</div><div class="line">    ConcurrentMarkSweepThread::synchronize(false);</div><div class="line">  &#125; else if (UseG1GC) &#123;</div><div class="line">    SuspendibleThreadSet::synchronize();</div><div class="line">  &#125;</div><div class="line">#endif // INCLUDE_ALL_GCS</div><div class="line"></div><div class="line">  // By getting the Threads_lock, we assure that no threads are about to start or</div><div class="line">  // exit. It is released again in SafepointSynchronize::end().</div><div class="line">  Threads_lock-&gt;lock();</div><div class="line"></div><div class="line">  assert( _state == _not_synchronized, &quot;trying to safepoint synchronize with wrong state&quot;);</div><div class="line"></div><div class="line">  int nof_threads = Threads::number_of_threads();</div><div class="line"></div><div class="line">  if (TraceSafepoint) &#123;</div><div class="line">    tty-&gt;print_cr(&quot;Safepoint synchronization initiated. (%d)&quot;, nof_threads);</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  RuntimeService::record_safepoint_begin();</div><div class="line"></div><div class="line">  MutexLocker mu(Safepoint_lock);</div><div class="line"></div><div class="line">  // Reset the count of active JNI critical threads</div><div class="line">  _current_jni_active_count = 0;</div><div class="line"></div><div class="line">  // Set number of threads to wait for, before we initiate the callbacks</div><div class="line">  _waiting_to_block = nof_threads;</div><div class="line">  TryingToBlock     = 0 ;</div><div class="line">  int still_running = nof_threads;</div><div class="line"></div><div class="line">  // Save the starting time, so that it can be compared to see if this has taken</div><div class="line">  // too long to complete.</div><div class="line">  jlong safepoint_limit_time = 0;</div><div class="line">  timeout_error_printed = false;</div><div class="line"></div><div class="line">  // PrintSafepointStatisticsTimeout can be specified separately. When</div><div class="line">  // specified, PrintSafepointStatistics will be set to true in</div><div class="line">  // deferred_initialize_stat method. The initialization has to be done</div><div class="line">  // early enough to avoid any races. See bug 6880029 for details.</div><div class="line">  if (PrintSafepointStatistics || PrintSafepointStatisticsTimeout &gt; 0) &#123;</div><div class="line">    deferred_initialize_stat();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  // Begin the process of bringing the system to a safepoint.</div><div class="line">  // Java threads can be in several different states and are</div><div class="line">  // stopped by different mechanisms:</div><div class="line">  //</div><div class="line">  //  1. Running interpreted</div><div class="line">  //     The interpeter dispatch table is changed to force it to</div><div class="line">  //     check for a safepoint condition between bytecodes.</div><div class="line">  //  2. Running in native code</div><div class="line">  //     When returning from the native code, a Java thread must check</div><div class="line">  //     the safepoint _state to see if we must block.  If the</div><div class="line">  //     VM thread sees a Java thread in native, it does</div><div class="line">  //     not wait for this thread to block.  The order of the memory</div><div class="line">  //     writes and reads of both the safepoint state and the Java</div><div class="line">  //     threads state is critical.  In order to guarantee that the</div><div class="line">  //     memory writes are serialized with respect to each other,</div><div class="line">  //     the VM thread issues a memory barrier instruction</div><div class="line">  //     (on MP systems).  In order to avoid the overhead of issuing</div><div class="line">  //     a memory barrier for each Java thread making native calls, each Java</div><div class="line">  //     thread performs a write to a single memory page after changing</div><div class="line">  //     the thread state.  The VM thread performs a sequence of</div><div class="line">  //     mprotect OS calls which forces all previous writes from all</div><div class="line">  //     Java threads to be serialized.  This is done in the</div><div class="line">  //     os::serialize_thread_states() call.  This has proven to be</div><div class="line">  //     much more efficient than executing a membar instruction</div><div class="line">  //     on every call to native code.</div><div class="line">  //  3. Running compiled Code</div><div class="line">  //     Compiled code reads a global (Safepoint Polling) page that</div><div class="line">  //     is set to fault if we are trying to get to a safepoint.</div><div class="line">  //  4. Blocked</div><div class="line">  //     A thread which is blocked will not be allowed to return from the</div><div class="line">  //     block condition until the safepoint operation is complete.</div><div class="line">  //  5. In VM or Transitioning between states</div><div class="line">  //     If a Java thread is currently running in the VM or transitioning</div><div class="line">  //     between states, the safepointing code will wait for the thread to</div><div class="line">  //     block itself when it attempts transitions to a new state.</div><div class="line">  //</div><div class="line">  _state            = _synchronizing;</div><div class="line">  OrderAccess::fence();</div><div class="line"></div><div class="line">  // Flush all thread states to memory</div><div class="line">  if (!UseMembar) &#123;</div><div class="line">    os::serialize_thread_states();</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  // Make interpreter safepoint aware</div><div class="line">  Interpreter::notice_safepoints();</div></pre></td></tr></table></figure></p>
+<p>这段代码很简单，我们这里描述一下流程：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line"> -------------------------------------------</div><div class="line">|                                           |</div><div class="line">|   lock Threads_lock                       |</div><div class="line">|                                           |</div><div class="line"> -------------------------------------------</div><div class="line">                    |</div><div class="line">                   \ /</div><div class="line"> -------------------------------------------</div><div class="line">|                                           |</div><div class="line">|         number_of_threads                 |</div><div class="line"> ------------------------------------------- 	</div><div class="line">                    |</div><div class="line">                   \ / </div><div class="line"> -------------------------------------------</div><div class="line">|                                           |</div><div class="line">|         serialize_thread_states           |</div><div class="line"> -------------------------------------------  </div><div class="line">                    |</div><div class="line">                   \ / </div><div class="line"> -------------------------------------------</div><div class="line">|                                           |</div><div class="line">|         notice_safepoints                 |</div><div class="line"> -------------------------------------------</div></pre></td></tr></table></figure></p>
+<p>我们这里只讨论UseMembar关闭的情况（UseMembar默认关闭的，采用Memeory barrier，Running in native code说明此方式效率低，不建议使用），VMThread线程执行过程中，获取Threads_lock，不在创建新的线程，并且统计目前运行的线程数，做后续统计使用。我们需要重点关心的是serialize_thread_states。<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\runtime\os.cpp:</div><div class="line"></div><div class="line">// Serialize all thread state variables</div><div class="line">void os::serialize_thread_states() &#123;</div><div class="line">  // On some platforms such as Solaris &amp; Linux, the time duration of the page</div><div class="line">  // permission restoration is observed to be much longer than expected  due to</div><div class="line">  // scheduler starvation problem etc. To avoid the long synchronization</div><div class="line">  // time and expensive page trap spinning, &apos;SerializePageLock&apos; is used to block</div><div class="line">  // the mutator thread if such case is encountered. See bug 6546278 for details.</div><div class="line">  Thread::muxAcquire(&amp;SerializePageLock, &quot;serialize_thread_states&quot;);</div><div class="line">  os::protect_memory((char *)os::get_memory_serialize_page(),</div><div class="line">                     os::vm_page_size(), MEM_PROT_READ);</div><div class="line">  os::protect_memory((char *)os::get_memory_serialize_page(),</div><div class="line">                     os::vm_page_size(), MEM_PROT_RW);</div><div class="line">  Thread::muxRelease(&amp;SerializePageLock);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>这段代码为什么这么写，使用锁注释写的很清楚，那么为什么把memory_serialize_page修改只读后，又把其修改为可读可写呢。估计和告诉缓存有关，将其写为可读后，为了将线程修改这个页同步到内存中，让其他线程可见。<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">void TemplateInterpreter::notice_safepoints() &#123;</div><div class="line">  if (!_notice_safepoints) &#123;</div><div class="line">    // switch to safepoint dispatch table</div><div class="line">    _notice_safepoints = true;</div><div class="line">    copy_table((address*)&amp;_safept_table, (address*)&amp;_active_table, sizeof(_active_table) / sizeof(address));</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>而JVM通过C++模板解释器解释字节码的执行，字节码的跳转正常都是通过_active_table跳转表，在这里就是讲_active_table修改为_safept_table，让其执行safepoint的代码，让每个执行字节码的线程进入阻塞状态。从总体而言，虚拟机执行的过程如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line"> -------------------------------------------</div><div class="line">|                                           |</div><div class="line">|   write_memory_serialize_page             |</div><div class="line">|                                           |</div><div class="line"> -------------------------------------------</div><div class="line">                    |</div><div class="line">                   \ /</div><div class="line"> -------------------------------------------</div><div class="line">|                                           |</div><div class="line">|         block thread                      |</div><div class="line"> -------------------------------------------</div></pre></td></tr></table></figure></p>
+<p>我们先看看_safept_entry的定义：<br><figure class="highlight c++"><table><tr><td class="code"><pre><div class="line">&#123; <span class="function">CodeletMark <span class="title">cm</span><span class="params">(<span class="number">_</span>masm, <span class="string">"safepoint entry points"</span>)</span></span>;</div><div class="line">  Interpreter::<span class="number">_</span>safept_entry =</div><div class="line">    EntryPoint(</div><div class="line">      generate_safept_entry_for(btos, CAST_FROM_FN_PTR(address, InterpreterRuntime::at_safepoint)),</div><div class="line">      generate_safept_entry_for(ztos, CAST_FROM_FN_PTR(address, InterpreterRuntime::at_safepoint)),</div><div class="line">      generate_safept_entry_for(ctos, CAST_FROM_FN_PTR(address, InterpreterRuntime::at_safepoint)),</div><div class="line">      generate_safept_entry_for(stos, CAST_FROM_FN_PTR(address, InterpreterRuntime::at_safepoint)),</div><div class="line">      generate_safept_entry_for(atos, CAST_FROM_FN_PTR(address, InterpreterRuntime::at_safepoint)),</div><div class="line">      generate_safept_entry_for(itos, CAST_FROM_FN_PTR(address, InterpreterRuntime::at_safepoint)),</div><div class="line">      generate_safept_entry_for(ltos, CAST_FROM_FN_PTR(address, InterpreterRuntime::at_safepoint)),</div><div class="line">      generate_safept_entry_for(ftos, CAST_FROM_FN_PTR(address, InterpreterRuntime::at_safepoint)),</div><div class="line">      generate_safept_entry_for(dtos, CAST_FROM_FN_PTR(address, InterpreterRuntime::at_safepoint)),</div><div class="line">      generate_safept_entry_for(vtos, CAST_FROM_FN_PTR(address, InterpreterRuntime::at_safepoint))</div><div class="line">    );</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>在这段代码生成没有特别需要注意的，我们关系的是at_safepoint：<br><figure class="highlight c++"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\interpreter\interpreterRuntime.cpp:</div><div class="line"></div><div class="line">IRT_ENTRY(<span class="keyword">void</span>, InterpreterRuntime::at_safepoint(JavaThread* thread))</div><div class="line">  <span class="comment">// We used to need an explict preserve_arguments here for invoke bytecodes. However,</span></div><div class="line">  <span class="comment">// stack traversal automatically takes care of preserving arguments for invoke, so</span></div><div class="line">  <span class="comment">// this is no longer needed.</span></div><div class="line"></div><div class="line">  <span class="comment">// IRT_END does an implicit safepoint check, hence we are guaranteed to block</span></div><div class="line">  <span class="comment">// if this is called during a safepoint</span></div><div class="line"></div><div class="line">  <span class="keyword">if</span> (JvmtiExport::should_post_single_step()) &#123;</div><div class="line">    <span class="comment">// We are called during regular safepoints and when the VM is</span></div><div class="line">    <span class="comment">// single stepping. If any thread is marked for single stepping,</span></div><div class="line">    <span class="comment">// then we may have JVMTI work to do.</span></div><div class="line">    JvmtiExport::at_single_stepping_point(thread, method(thread), bcp(thread));</div><div class="line">  &#125;</div><div class="line">IRT_END</div></pre></td></tr></table></figure></p>
+<p>我们展开看：<br><figure class="highlight c++"><table><tr><td class="code"><pre><div class="line"><span class="keyword">void</span>  InterpreterRuntime::at_safepoint(JavaThread* thread) &#123;                                               </div><div class="line">    ThreadInVMfromJava <span class="number">__</span>tiv(thread);                                </div><div class="line">                                        </div><div class="line">  HandleMarkCleaner <span class="number">__</span>hm(thread);                                    </div><div class="line">  Thread* <span class="number">__</span>the_thread__ = thread;                                           </div><div class="line">  os::verify_stack_alignment();                       </div><div class="line">  </div><div class="line">  <span class="comment">// We used to need an explict preserve_arguments here for invoke bytecodes. However,</span></div><div class="line">  <span class="comment">// stack traversal automatically takes care of preserving arguments for invoke, so</span></div><div class="line">  <span class="comment">// this is no longer needed.</span></div><div class="line"></div><div class="line">  <span class="comment">// IRT_END does an implicit safepoint check, hence we are guaranteed to block</span></div><div class="line">  <span class="comment">// if this is called during a safepoint</span></div><div class="line"></div><div class="line">  <span class="keyword">if</span> (JvmtiExport::should_post_single_step()) &#123;</div><div class="line">    <span class="comment">// We are called during regular safepoints and when the VM is</span></div><div class="line">    <span class="comment">// single stepping. If any thread is marked for single stepping,</span></div><div class="line">    <span class="comment">// then we may have JVMTI work to do.</span></div><div class="line">    JvmtiExport::at_single_stepping_point(thread, method(thread), bcp(thread));</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>进入safepoint的终点代码在：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">hotspot\src\share\vm\runtime\interfaceSupport.hpp:</div><div class="line"></div><div class="line">class ThreadInVMfromJava : public ThreadStateTransition &#123;</div><div class="line"> public:</div><div class="line">  ThreadInVMfromJava(JavaThread* thread) : ThreadStateTransition(thread) &#123;</div><div class="line">    trans_from_java(_thread_in_vm);</div><div class="line">  &#125;</div><div class="line">  ~ThreadInVMfromJava()  &#123;</div><div class="line">    trans(_thread_in_vm, _thread_in_Java);</div><div class="line">    // Check for pending. async. exceptions or suspends.</div><div class="line">    if (_thread-&gt;has_special_runtime_exit_condition()) _thread-&gt;handle_special_runtime_exit_condition();</div><div class="line">  &#125;</div><div class="line">&#125;;</div><div class="line"></div><div class="line">  static inline void transition(JavaThread *thread, JavaThreadState from, JavaThreadState to) &#123;</div><div class="line">    assert(from != _thread_in_Java, &quot;use transition_from_java&quot;);</div><div class="line">    assert(from != _thread_in_native, &quot;use transition_from_native&quot;);</div><div class="line">    assert((from &amp; 1) == 0 &amp;&amp; (to &amp; 1) == 0, &quot;odd numbers are transitions states&quot;);</div><div class="line">    assert(thread-&gt;thread_state() == from, &quot;coming from wrong thread state&quot;);</div><div class="line">    // Change to transition state (assumes total store ordering!  -Urs)</div><div class="line">    thread-&gt;set_thread_state((JavaThreadState)(from + 1));</div><div class="line"></div><div class="line">    // Make sure new state is seen by VM thread</div><div class="line">    if (os::is_MP()) &#123;</div><div class="line">      if (UseMembar) &#123;</div><div class="line">        // Force a fence between the write above and read below</div><div class="line">        OrderAccess::fence();</div><div class="line">      &#125; else &#123;</div><div class="line">        // store to serialize page so VM thread can do pseudo remote membar</div><div class="line">        os::write_memory_serialize_page(thread);</div><div class="line">      &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    if (SafepointSynchronize::do_call_back()) &#123;</div><div class="line">      SafepointSynchronize::block(thread);</div><div class="line">    &#125;</div><div class="line">    thread-&gt;set_thread_state(to);</div><div class="line"></div><div class="line">    CHECK_UNHANDLED_OOPS_ONLY(thread-&gt;clear_unhandled_oops();)</div><div class="line">  &#125;</div></pre></td></tr></table></figure></p>
+<p>我们知道调用一个结构的时候，gcc自动增加析构函数的调用。我们将执行的线程状态修改为_thread_in_vm后，执行一些前置工作后，会调用析构函数也就是~ThreadInVMfromJava()。那么虚拟机怎么通过memory_serialize_page来模拟memory barrier系的指令的呢？<br>在单处理器系统中不存在此问题</p>
+<h2 id="为什么UseMembar比serialization-page性能好？"><a href="#为什么UseMembar比serialization-page性能好？" class="headerlink" title="为什么UseMembar比serialization page性能好？"></a>为什么UseMembar比serialization page性能好？</h2><p>因为原本Java thread和VM thread都要做membar；用了serialization page之后只有VM thread那边要做mprotect+membar（比原本慢），而Java thread只要做一个普通的serialization page read（比原本快）。VM thread只有一个而Java thread可能有很多个，这样就赚了。</p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/20/jvm/jvm_safepoint/" class="archive-article-date">
+  	<time datetime="2016-09-20T00:47:34.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-20</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/JVM/">JVM</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2016/09/20/linux/linux-memory-slab-slub-slob/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          Linux内核之slab、slub、slob内存分配器
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2016/09/20/hash/hash-main/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Hash 算法</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="jvm/jvm_safepoint" data-title="JVM之Safepoint" data-url="http://yoursite.com/2016/09/20/jvm/jvm_safepoint/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2017 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/Hdfs/" style="font-size: 13.33px;">Hdfs</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a> <a href="/tags/OpenJDK/" style="font-size: 13.33px;">OpenJDK</a> <a href="/tags/Phoenix/" style="font-size: 10px;">Phoenix</a> <a href="/tags/algorithm/" style="font-size: 16.67px;">algorithm</a> <a href="/tags/streamset/" style="font-size: 10px;">streamset</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>Java String Intern | Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="String.intern()在jdk7以后的实现。
+String internpackage string;public class Test11 &amp;#123;	public static void main(String[] args)&amp;#123;		//-----s0-----		/**		 * 不要使用new String(&quot;aaaaa&quot;)此类;		 * 可以使用s01 = &quot;aaaaa">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java String Intern">
+<meta property="og:url" content="http://yoursite.com/2016/09/23/jvm/string-intern/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="String.intern()在jdk7以后的实现。
+String internpackage string;public class Test11 &amp;#123;	public static void main(String[] args)&amp;#123;		//-----s0-----		/**		 * 不要使用new String(&quot;aaaaa&quot;)此类;		 * 可以使用s01 = &quot;aaaaa">
+<meta property="og:updated_time" content="2016-12-05T02:37:13.670Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Java String Intern">
+<meta name="twitter:description" content="String.intern()在jdk7以后的实现。
+String internpackage string;public class Test11 &amp;#123;	public static void main(String[] args)&amp;#123;		//-----s0-----		/**		 * 不要使用new String(&quot;aaaaa&quot;)此类;		 * 可以使用s01 = &quot;aaaaa">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-jvm/string-intern" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Java String Intern
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <a id="more"></a>
+<p>String.intern()在jdk7以后的实现。</p>
+<h2 id="String-intern"><a href="#String-intern" class="headerlink" title="String intern"></a>String intern</h2><figure class="highlight java"><table><tr><td class="code"><pre><div class="line"><span class="keyword">package</span> string;</div><div class="line"></div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test11</span> </span>&#123;</div><div class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</div><div class="line">		<span class="comment">//-----s0-----</span></div><div class="line">		<span class="comment">/**</span></div><div class="line">		 * 不要使用new String("aaaaa")此类;</div><div class="line">		 * 可以使用s01 = "aaaaa";</div><div class="line">		 * 可以节约内存</div><div class="line">		 */</div><div class="line">		<span class="comment">//建立两个对象，"aaaaa"在符号表中，s00指向的对象在堆中</span></div><div class="line">		String s00 = <span class="keyword">new</span> String(<span class="string">"aaaaa"</span>);</div><div class="line">		String s01 = <span class="string">"aaaaa"</span>;</div><div class="line">		<span class="comment">//false,由于s00中建立了两个字符串对象，第一个是"aaaaa"，第二个才是new的,s00指向new的,s00.intern()指向第一個在符号表的对象</span></div><div class="line">		System.out.println(<span class="string">"s00.intern() == s00:"</span>+(s00.intern() == s00));</div><div class="line">		<span class="comment">//true</span></div><div class="line">		System.out.println(<span class="string">"s01.intern() == s01:"</span>+(s01.intern() == s01));</div><div class="line"></div><div class="line">		</div><div class="line">		<span class="comment">//-----s1-----</span></div><div class="line">		<span class="comment">/**</span></div><div class="line">		 * 使用常量拼接会比使用StringBuilder效率更高(编译器可以确定为常量)</div><div class="line">		 * 对于不确定是常量的字符串拼接，还是老老实实的使用StringBuilder</div><div class="line">		 */</div><div class="line">		<span class="comment">//在符号表建立"aaabb"。javac会优化此类方式</span></div><div class="line">		String s10 = <span class="string">"aaa"</span> + <span class="string">"bb"</span>;</div><div class="line">		<span class="keyword">final</span> String s11 =  <span class="string">"aaa"</span>;</div><div class="line">		String s12 = s11 + <span class="string">"bb"</span>;</div><div class="line">		String s13 = <span class="string">"aaa"</span>;</div><div class="line">		String s14 = s13+<span class="string">"bb"</span>;</div><div class="line">		String s15 = <span class="keyword">new</span> String(<span class="string">"aaa"</span>) + <span class="string">"bb"</span>;</div><div class="line">		<span class="comment">//true</span></div><div class="line">		System.out.println(<span class="string">"s10 == s12:"</span>+ (s10 == s12));</div><div class="line">		<span class="comment">//false,由于编译器无法确定为常量,所以不会优化,s14是在堆中新建的字符串，所以和和s10不一样</span></div><div class="line">		System.out.println(<span class="string">"s14 == s10:"</span>+ (s14 == s10));</div><div class="line">		<span class="comment">//false,同上</span></div><div class="line">		System.out.println(<span class="string">"s15 == s10:"</span>+ (s15 == s10));</div><div class="line">		</div><div class="line">		<span class="comment">/**</span></div><div class="line">		 * intern根据不同的jdk版本不一样，下面的结果jdk6和jdk7是不一样的，描述适用于jdk7.</div><div class="line">		 * 合理使用intern,可以减少内存使用</div><div class="line">		 */</div><div class="line">		<span class="comment">//-----s2-----</span></div><div class="line">		String s20 = <span class="keyword">new</span> StringBuilder(<span class="string">"z"</span>).append(<span class="string">".AccessibleObject"</span>).toString(); <span class="comment">//new string object</span></div><div class="line">		String s21 = <span class="keyword">new</span> StringBuilder(<span class="string">"z"</span>).append(<span class="string">".AccessibleObject"</span>).toString(); <span class="comment">//new string object</span></div><div class="line">		String s22 = <span class="keyword">new</span> StringBuilder(<span class="string">"jav"</span>).append(<span class="string">"a.lang.String"</span>).toString();<span class="comment">//old stringtable</span></div><div class="line">		<span class="comment">//true，intern如果字符串表没有这个字符串，则建立字符串表到这个对象的映射,所以这里s20.intern指向的是s20</span></div><div class="line">		System.out.println(<span class="string">"s20.intern() == s20:"</span>+(s20.intern() == s20));</div><div class="line">		<span class="comment">//true，同上</span></div><div class="line">		System.out.println(<span class="string">"s20 == s21.intern():"</span>+(s20 == s21.intern()));</div><div class="line">		<span class="comment">//由于虚拟机已经池化了这个字符串,所以intern指向的是虚拟机的字符串对象，而不是s22</span></div><div class="line">		System.out.println(<span class="string">"a2.intern() == a2:"</span>+(s22.intern() == s22));</div><div class="line">		</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/23/jvm/string-intern/" class="archive-article-date">
+  	<time datetime="2016-09-23T03:30:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/JAVA/">JAVA</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2016/09/23/jvm/classloader/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          JVM ClassLoader机制
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2016/09/23/jvm/java-xx-command-NativeMemoryTracking/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Java 命令行---（NativeMemoryTracking）</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="jvm/string-intern" data-title="Java String Intern" data-url="http://yoursite.com/2016/09/23/jvm/string-intern/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2017 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/Hdfs/" style="font-size: 13.33px;">Hdfs</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a> <a href="/tags/OpenJDK/" style="font-size: 13.33px;">OpenJDK</a> <a href="/tags/Phoenix/" style="font-size: 10px;">Phoenix</a> <a href="/tags/algorithm/" style="font-size: 16.67px;">algorithm</a> <a href="/tags/streamset/" style="font-size: 10px;">streamset</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>
