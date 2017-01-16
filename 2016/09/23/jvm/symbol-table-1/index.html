@@ -6,19 +6,22 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <title>JVM之SymbolTable(一) | Corner XX daily log</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="概述虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。文中介绍SymbolTable的实现，初始化和基本用法。
-SymbolTable初始化符号表是一个Hash表SymbolTable是通过调用initialize_symbols进行初始化的。void SymbolTable::initialize_symbols(">
+  <meta name="description" content="虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。文中介绍SymbolTable的实现，初始化和基本用法。
+概述虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。文中介绍SymbolTable的实现，初始化和基本用法。
+SymbolTab">
 <meta property="og:type" content="article">
 <meta property="og:title" content="JVM之SymbolTable(一)">
 <meta property="og:url" content="http://yoursite.com/2016/09/23/jvm/symbol-table-1/index.html">
 <meta property="og:site_name" content="Corner XX daily log">
-<meta property="og:description" content="概述虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。文中介绍SymbolTable的实现，初始化和基本用法。
-SymbolTable初始化符号表是一个Hash表SymbolTable是通过调用initialize_symbols进行初始化的。void SymbolTable::initialize_symbols(">
-<meta property="og:updated_time" content="2016-09-23T10:08:07.871Z">
+<meta property="og:description" content="虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。文中介绍SymbolTable的实现，初始化和基本用法。
+概述虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。文中介绍SymbolTable的实现，初始化和基本用法。
+SymbolTab">
+<meta property="og:updated_time" content="2017-01-16T01:49:46.588Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="JVM之SymbolTable(一)">
-<meta name="twitter:description" content="概述虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。文中介绍SymbolTable的实现，初始化和基本用法。
-SymbolTable初始化符号表是一个Hash表SymbolTable是通过调用initialize_symbols进行初始化的。void SymbolTable::initialize_symbols(">
+<meta name="twitter:description" content="虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。文中介绍SymbolTable的实现，初始化和基本用法。
+概述虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。文中介绍SymbolTable的实现，初始化和基本用法。
+SymbolTab">
   
     <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
   
@@ -150,6 +153,7 @@ SymbolTable初始化符号表是一个Hash表SymbolTable是通过调用initializ
     <div class="article-entry" itemprop="articleBody">
       
         <a id="more"></a>
+<p>虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。<br>文中介绍SymbolTable的实现，初始化和基本用法。</p>
 <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>虚拟机中重要的数据结构之一，可以看到虚拟机的代码中到处可以看到这个数据结构的使用，虚拟机运行时的符号等都是保存在这个数据结构中的。<br>文中介绍SymbolTable的实现，初始化和基本用法。</p>
 <h2 id="SymbolTable初始化"><a href="#SymbolTable初始化" class="headerlink" title="SymbolTable初始化"></a>SymbolTable初始化</h2><p>符号表是一个Hash表<br>SymbolTable是通过调用initialize_symbols进行初始化的。<br><figure class="highlight cpp"><table><tr><td class="code"><pre><div class="line"><span class="keyword">void</span> SymbolTable::initialize_symbols(<span class="keyword">int</span> arena_alloc_size) &#123;</div><div class="line">  <span class="comment">// Initialize the arena for global symbols, size passed in depends on CDS.</span></div><div class="line">  <span class="keyword">if</span> (arena_alloc_size == <span class="number">0</span>) &#123;</div><div class="line">    <span class="number">_</span>arena = <span class="keyword">new</span> (mtSymbol) Arena();</div><div class="line">  &#125; <span class="keyword">else</span> &#123;</div><div class="line">    <span class="number">_</span>arena = <span class="keyword">new</span> (mtSymbol) Arena(arena_alloc_size);</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
 <p>可以知道符号表的初始化时通过使用Arena来管理内存的，可以参考<a href="/2016/09/21/jvm-memory-allocate/">JVM 基础设施之内存分配</a>。我们可以知道符号表的内存类型mtSymbol，在MemTrack的类型也是mtSymbol。对应的内存是单独向操作系统申请的，和虚拟机的内存管理是独立的。</p>
@@ -186,11 +190,11 @@ SymbolTable初始化符号表是一个Hash表SymbolTable是通过调用initializ
   
 <nav id="article-nav">
   
-    <a href="/2016/10/10/jvm/openjdk8-make-debug/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2016/09/23/jvm/java-xx-command/" id="article-nav-newer" class="article-nav-link-wrap">
       <i class="icon-circle-left"></i>
       <div class="article-nav-title">
         
-          OpenJDK 8 编译调试
+          Java 命令行---XX详解
         
       </div>
     </a>
