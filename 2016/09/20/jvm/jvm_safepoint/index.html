@@ -155,9 +155,9 @@
 <li>线程处于阻塞状态<br>Java虚拟机不允许唤醒虚拟机处于safepoint时唤醒处于Block状态的线程</li>
 <li>线程处于VM状态<br>Java虚拟机同样不允许虚拟机切换状态</li>
 </ul>
-<h2 id="流程"><a href="#流程" class="headerlink" title="流程"></a>流程</h2><p>VMThread进入safepoint的流程如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">begin=&gt;start: 开始</div><div class="line">Threads_lock=&gt;operation: 1.获取Threads_lock</div><div class="line">number_of_threads=&gt;operation: 2.得到线程数</div><div class="line">Safepoint_lock=&gt;operation: 3.获取Safepoint_lock</div><div class="line">assign=&gt;operation: 4._waiting_to_block=still_running=线程数</div><div class="line">notice_safepoints=&gt;operation: 5.Interpreter::notice_safepoints()</div><div class="line">none=&gt;operation: EMPTY</div><div class="line">still_running=&gt;condition: 6.! still_running &gt; 0</div><div class="line">empty=&gt;operation: EMPTY</div><div class="line">waiting_to_block=&gt;condition: 7.! _waiting_to_block &gt; 0</div><div class="line">stop=&gt;end: END</div><div class="line"></div><div class="line">begin-&gt;Threads_lock-&gt;number_of_threads-&gt;Safepoint_lock-&gt;assign-&gt;notice_safepoints-&gt;none-&gt;still_running-&gt;empty-&gt;waiting_to_block-&gt;stop</div><div class="line"></div><div class="line">still_running(no)-&gt;none</div><div class="line">still_running(yes)-&gt;empty</div><div class="line">waiting_to_block(no)-&gt;empty</div><div class="line">waiting_to_block(yes)-&gt;stop</div></pre></td></tr></table></figure></p>
-<p>JavaThread进入safapoint的流程如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">begin_JavaThread=&gt;start: 1.开始</div><div class="line">write_memory_serialize_page_JavaThread=&gt;operation: 2.写memory_serialize</div><div class="line">Safepoint_lock_JavaThread=&gt;operation: 3.获取Safepoint_lock</div><div class="line">assign_JavaThread=&gt;operation: 4._waiting_to_block--</div><div class="line">Safepoint_unlock_JavaThread=&gt;operation: 5.释放Safepoint_lock</div><div class="line">Threads_lock_JavaThread=&gt;operation: 6.获取Threads_lock</div><div class="line">set_thread_state_JavaThread=&gt;operation: 7.set_thread_state</div><div class="line">Threads_unlock_JavaThread=&gt;operation: 8.释放Threads_lock</div><div class="line">stop_JavaThread=&gt;end: END</div><div class="line"></div><div class="line">begin_JavaThread-&gt;write_memory_serialize_page_JavaThread-&gt;Safepoint_lock_JavaThread-&gt;assign_JavaThread-&gt;Safepoint_unlock_JavaThread-&gt;Threads_lock_JavaThread-&gt;set_thread_state_JavaThread-&gt;Threads_unlock_JavaThread-&gt;stop_JavaThread</div></pre></td></tr></table></figure></p>
-<p>VMThread线程需要和其他线程连在一起看，我们重点关注VMThread和JavaThread线程。虚拟机分配对象的时候发现内存空间不足够，虚拟机向VMThread线程发送执行垃圾回收的指令，VMThread执行进入safepoint操作，一般会涉及以下几个操作：</p>
+<h2 id="流程"><a href="#流程" class="headerlink" title="流程"></a>流程</h2><p>VMThread进入safepoint的流程如下：</p>
+<p><div id="flowchart-0" class="flow-chart"></div><br>JavaThread进入safapoint的流程如下：</p>
+<p><div id="flowchart-1" class="flow-chart"></div><br>VMThread线程需要和其他线程连在一起看，我们重点关注VMThread和JavaThread线程。虚拟机分配对象的时候发现内存空间不足够，虚拟机向VMThread线程发送执行垃圾回收的指令，VMThread执行进入safepoint操作，一般会涉及以下几个操作：</p>
 <ol>
 <li>VMThread获取Threads_lock锁，让虚拟机不在接受创建线程工作</li>
 <li>统计当前的线程数量，此时线程数量不会增减，由于持有锁，不会创建，也不会减少线程数量</li>
@@ -214,7 +214,34 @@
 <p>在x86平台上，对处于<strong>_thread_in_native</strong>状态的线程，以上方法始终返回true。也就是说对于jni调用，VMThread始终认为可以进入safepoint。至于从jni中再调用java代码，就按照正常的流程让进程阻塞。</p>
 <h2 id="阻塞线程进入Safepoint"><a href="#阻塞线程进入Safepoint" class="headerlink" title="阻塞线程进入Safepoint"></a>阻塞线程进入Safepoint</h2><p>对于阻塞状态的线程和jni线程一样，但是对于返回正常状态，虚拟机必须等退出阻塞状态，才能让此线程继续运行。进入安全点的判断方法如JNI。</p>
 <h2 id="线程状态转换进入Safepoint"><a href="#线程状态转换进入Safepoint" class="headerlink" title="线程状态转换进入Safepoint"></a>线程状态转换进入Safepoint</h2><h2 id="更新记录"><a href="#更新记录" class="headerlink" title="更新记录"></a>更新记录</h2><p><a href="http://blog.csdn.net/iter_zc/article/details/41847887" target="_blank" rel="external">http://blog.csdn.net/iter_zc/article/details/41847887</a></p>
-<h2 id="为什么源码注释说Serialization-Page的性能比membar还好？"><a href="#为什么源码注释说Serialization-Page的性能比membar还好？" class="headerlink" title="为什么源码注释说Serialization Page的性能比membar还好？"></a>为什么源码注释说Serialization Page的性能比membar还好？</h2><p>因为原本Java thread和VM thread都要做membar；用了serialization page之后只有VM thread那边要做mprotect+membar（比原本慢），而Java thread只要做一个普通的serialization page read（比原本快）。VM thread只有一个而Java thread可能有很多个。细节参考<strong>Asymmetric-Dekker-Synchronization</strong></p>
+<h2 id="为什么源码注释说Serialization-Page的性能比membar还好？"><a href="#为什么源码注释说Serialization-Page的性能比membar还好？" class="headerlink" title="为什么源码注释说Serialization Page的性能比membar还好？"></a>为什么源码注释说Serialization Page的性能比membar还好？</h2><p>因为原本Java thread和VM thread都要做membar；用了serialization page之后只有VM thread那边要做mprotect+membar（比原本慢），而Java thread只要做一个普通的serialization page read（比原本快）。VM thread只有一个而Java thread可能有很多个。细节参考<strong>Asymmetric-Dekker-Synchronization</strong><script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.7/raphael.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.6.5/flowchart.min.js"></script><textarea id="flowchart-0-code" style="display: none">begin=>start: 开始
+Threads_lock=>operation: 1.获取Threads_lock
+number_of_threads=>operation: 2.得到线程数
+Safepoint_lock=>operation: 3.获取Safepoint_lock
+assign=>operation: 4._waiting_to_block=still_running=线程数
+notice_safepoints=>operation: 5.Interpreter::notice_safepoints()
+none=>operation: EMPTY
+still_running=>condition: 6.! still_running > 0
+empty=>operation: EMPTY
+waiting_to_block=>condition: 7.! _waiting_to_block > 0
+stop=>end: END
+
+begin->Threads_lock->number_of_threads->Safepoint_lock->assign->notice_safepoints->none->still_running->empty->waiting_to_block->stop
+
+still_running(no)->none
+still_running(yes)->empty
+waiting_to_block(no)->empty
+waiting_to_block(yes)->stop</textarea><textarea id="flowchart-0-options" style="display: none">{"scale":1,"line-width":2,"line-length":50,"text-margin":10,"font-size":12}</textarea><script>  var code = document.getElementById("flowchart-0-code").value;  var options = JSON.parse(decodeURIComponent(document.getElementById("flowchart-0-options").value));  var diagram = flowchart.parse(code);  diagram.drawSVG("flowchart-0", options);</script><textarea id="flowchart-1-code" style="display: none">begin_JavaThread=>start: 1.开始
+write_memory_serialize_page_JavaThread=>operation: 2.写memory_serialize
+Safepoint_lock_JavaThread=>operation: 3.获取Safepoint_lock
+assign_JavaThread=>operation: 4._waiting_to_block--
+Safepoint_unlock_JavaThread=>operation: 5.释放Safepoint_lock
+Threads_lock_JavaThread=>operation: 6.获取Threads_lock
+set_thread_state_JavaThread=>operation: 7.set_thread_state
+Threads_unlock_JavaThread=>operation: 8.释放Threads_lock
+stop_JavaThread=>end: END
+
+begin_JavaThread->write_memory_serialize_page_JavaThread->Safepoint_lock_JavaThread->assign_JavaThread->Safepoint_unlock_JavaThread->Threads_lock_JavaThread->set_thread_state_JavaThread->Threads_unlock_JavaThread->stop_JavaThread</textarea><textarea id="flowchart-1-options" style="display: none">{"scale":1,"line-width":2,"line-length":50,"text-margin":10,"font-size":12}</textarea><script>  var code = document.getElementById("flowchart-1-code").value;  var options = JSON.parse(decodeURIComponent(document.getElementById("flowchart-1-options").value));  var diagram = flowchart.parse(code);  diagram.drawSVG("flowchart-1", options);</script></p>
 
       
     </div>
@@ -244,18 +271,18 @@
   
 <nav id="article-nav">
   
-    <a href="/2016/09/20/linux/linux-syscall/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2016/09/20/linux/linux-memory-slab-slub-slob/" id="article-nav-newer" class="article-nav-link-wrap">
       <i class="icon-circle-left"></i>
       <div class="article-nav-title">
         
-          Linux内核之系统调用
+          Linux内核之slab、slub、slob内存分配器
         
       </div>
     </a>
   
   
-    <a href="/2016/09/20/hdfs-main/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">hdfs_main</div>
+    <a href="/2016/09/20/jvm/jvm_monitor/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">JVM之Monitor</div>
       <i class="icon-circle-right"></i>
     </a>
   
