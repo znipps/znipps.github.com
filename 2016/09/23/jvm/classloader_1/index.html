@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>JVM ClassLoader机制 | Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="终点描述类加载过程，包括虚拟机初始化加载类的过程，classloader加载类过程，本文适应于Linux x86_64平台，所有涉及的优化也是此平台。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JVM ClassLoader机制">
+<meta property="og:url" content="http://yoursite.com/2016/09/23/jvm/classloader_1/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="终点描述类加载过程，包括虚拟机初始化加载类的过程，classloader加载类过程，本文适应于Linux x86_64平台，所有涉及的优化也是此平台。">
+<meta property="og:updated_time" content="2017-01-16T08:17:47.808Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="JVM ClassLoader机制">
+<meta name="twitter:description" content="终点描述类加载过程，包括虚拟机初始化加载类的过程，classloader加载类过程，本文适应于Linux x86_64平台，所有涉及的优化也是此平台。">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-jvm/classloader_1" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      JVM ClassLoader机制
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>终点描述类加载过程，包括虚拟机初始化加载类的过程，classloader加载类过程，本文适应于Linux x86_64平台，所有涉及的优化也是此平台。<br><a id="more"></a></p>
+<h2 id="系统加载器概述"><a href="#系统加载器概述" class="headerlink" title="系统加载器概述"></a>系统加载器概述</h2><p>系统加载器类加载过程主要涉及以下几个方便：</p>
+<ol>
+<li>加载过程</li>
+<li>加载新类文件的过程</li>
+<li>加载的类在内存中的表现形式</li>
+</ol>
+<h2 id="Object-加载过程"><a href="#Object-加载过程" class="headerlink" title="Object 加载过程"></a>Object 加载过程</h2><p>此节提供虚拟机初始化时加载Object类文件的过程，Object类通过系统加载器加载，介绍openjdk 8的实现过程：<br><figure class="highlight c++"><table><tr><td class="code"><pre><div class="line">hotspot/src/share/vm/classfile/systemDictionary.cpp:</div><div class="line"></div><div class="line">Klass* SystemDictionary::resolve_instance_class_or_null(Symbol* name,</div><div class="line">                                                        Handle class_loader,</div><div class="line">                                                        Handle protection_domain,</div><div class="line">                                                        TRAPS) &#123;</div><div class="line">  assert(name != <span class="literal">NULL</span> &amp;&amp; !FieldType::is_array(name) &amp;&amp;</div><div class="line">         !FieldType::is_obj(name), <span class="string">"invalid class name"</span>);</div><div class="line"></div><div class="line">  Ticks class_load_start_time = Ticks::now();</div><div class="line"></div><div class="line">  <span class="comment">// UseNewReflection</span></div><div class="line">  <span class="comment">// Fix for 4474172; see evaluation for more details</span></div><div class="line">  class_loader = Handle(THREAD, java_lang_ClassLoader::non_reflection_class_loader(class_loader()));</div><div class="line">  ClassLoaderData *loader_data = register_loader(class_loader, CHECK_NULL);</div><div class="line"></div><div class="line">  <span class="comment">// Do lookup to see if class already exist and the protection domain</span></div><div class="line">  <span class="comment">// has the right access</span></div><div class="line">  <span class="comment">// This call uses find which checks protection domain already matches</span></div><div class="line">  <span class="comment">// All subsequent calls use find_class, and set has_loaded_class so that</span></div><div class="line">  <span class="comment">// before we return a result we call out to java to check for valid protection domain</span></div><div class="line">  <span class="comment">// to allow returning the Klass* and add it to the pd_set if it is valid</span></div><div class="line">  <span class="keyword">unsigned</span> <span class="keyword">int</span> d_hash = dictionary()-&gt;compute_hash(name, loader_data);</div><div class="line">  <span class="keyword">int</span> d_index = dictionary()-&gt;hash_to_index(d_hash);</div><div class="line">  Klass* probe = dictionary()-&gt;find(d_index, d_hash, name, loader_data,</div><div class="line">                                      protection_domain, THREAD);</div><div class="line">  <span class="keyword">if</span> (probe != <span class="literal">NULL</span>) <span class="keyword">return</span> probe;</div><div class="line"></div><div class="line"></div><div class="line">  <span class="comment">// Non-bootstrap class loaders will call out to class loader and</span></div><div class="line">  <span class="comment">// define via jvm/jni_DefineClass which will acquire the</span></div><div class="line">  <span class="comment">// class loader object lock to protect against multiple threads</span></div><div class="line">  <span class="comment">// defining the class in parallel by accident.</span></div><div class="line">  <span class="comment">// This lock must be acquired here so the waiter will find</span></div><div class="line">  <span class="comment">// any successful result in the SystemDictionary and not attempt</span></div><div class="line">  <span class="comment">// the define</span></div><div class="line">  <span class="comment">// ParallelCapable Classloaders and the bootstrap classloader,</span></div><div class="line">  <span class="comment">// or all classloaders with UnsyncloadClass do not acquire lock here</span></div><div class="line">  <span class="keyword">bool</span> DoObjectLock = <span class="literal">true</span>;</div><div class="line">  <span class="keyword">if</span> (is_parallelCapable(class_loader)) &#123;</div><div class="line">    DoObjectLock = <span class="literal">false</span>;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="keyword">unsigned</span> <span class="keyword">int</span> p_hash = placeholders()-&gt;compute_hash(name, loader_data);</div><div class="line">  <span class="keyword">int</span> p_index = placeholders()-&gt;hash_to_index(p_hash);</div><div class="line"></div><div class="line">  <span class="comment">// Class is not in SystemDictionary so we have to do loading.</span></div><div class="line">  <span class="comment">// Make sure we are synchronized on the class loader before we proceed</span></div><div class="line">  Handle lockObject = compute_loader_lock_object(class_loader, THREAD);</div><div class="line">  check_loader_lock_contention(lockObject, THREAD);</div><div class="line">  <span class="function">ObjectLocker <span class="title">ol</span><span class="params">(lockObject, THREAD, DoObjectLock)</span></span>;</div><div class="line"></div><div class="line">  <span class="comment">// Check again (after locking) if class already exist in SystemDictionary</span></div><div class="line">  <span class="keyword">bool</span> class_has_been_loaded   = <span class="literal">false</span>;</div><div class="line">  <span class="keyword">bool</span> super_load_in_progress  = <span class="literal">false</span>;</div><div class="line">  <span class="keyword">bool</span> havesupername = <span class="literal">false</span>;</div><div class="line">  instanceKlassHandle k;</div><div class="line">  PlaceholderEntry* placeholder;</div><div class="line">  Symbol* superclassname = <span class="literal">NULL</span>;</div><div class="line"></div><div class="line">  &#123;</div><div class="line">    <span class="function">MutexLocker <span class="title">mu</span><span class="params">(SystemDictionary_lock, THREAD)</span></span>;</div><div class="line">    Klass* check = find_class(d_index, d_hash, name, loader_data);</div><div class="line">    <span class="keyword">if</span> (check != <span class="literal">NULL</span>) &#123;</div><div class="line">      <span class="comment">// Klass is already loaded, so just return it</span></div><div class="line">      class_has_been_loaded = <span class="literal">true</span>;</div><div class="line">      k = instanceKlassHandle(THREAD, check);</div><div class="line">    &#125; <span class="keyword">else</span> &#123;</div><div class="line">      placeholder = placeholders()-&gt;get_entry(p_index, p_hash, name, loader_data);</div><div class="line">      <span class="keyword">if</span> (placeholder &amp;&amp; placeholder-&gt;super_load_in_progress()) &#123;</div><div class="line">         super_load_in_progress = <span class="literal">true</span>;</div><div class="line">         <span class="keyword">if</span> (placeholder-&gt;havesupername() == <span class="literal">true</span>) &#123;</div><div class="line">           superclassname = placeholder-&gt;supername();</div><div class="line">           havesupername = <span class="literal">true</span>;</div><div class="line">         &#125;</div><div class="line">      &#125;</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="comment">// If the class is in the placeholder table, class loading is in progress</span></div><div class="line">  <span class="keyword">if</span> (super_load_in_progress &amp;&amp; havesupername==<span class="literal">true</span>) &#123;</div><div class="line">    k = SystemDictionary::handle_parallel_super_load(name, superclassname,</div><div class="line">        class_loader, protection_domain, lockObject, THREAD);</div><div class="line">    <span class="keyword">if</span> (HAS_PENDING_EXCEPTION) &#123;</div><div class="line">      <span class="keyword">return</span> <span class="literal">NULL</span>;</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">if</span> (!k.is_null()) &#123;</div><div class="line">      class_has_been_loaded = <span class="literal">true</span>;</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="keyword">bool</span> throw_circularity_error = <span class="literal">false</span>;</div><div class="line">  <span class="keyword">if</span> (!class_has_been_loaded) &#123;</div><div class="line">    <span class="keyword">bool</span> load_instance_added = <span class="literal">false</span>;</div><div class="line"></div><div class="line">    <span class="comment">// add placeholder entry to record loading instance class</span></div><div class="line">    <span class="comment">// Five cases:</span></div><div class="line">    <span class="comment">// All cases need to prevent modifying bootclasssearchpath</span></div><div class="line">    <span class="comment">// in parallel with a classload of same classname</span></div><div class="line">    <span class="comment">// Redefineclasses uses existence of the placeholder for the duration</span></div><div class="line">    <span class="comment">// of the class load to prevent concurrent redefinition of not completely</span></div><div class="line">    <span class="comment">// defined classes.</span></div><div class="line">    <span class="comment">// case 1. traditional classloaders that rely on the classloader object lock</span></div><div class="line">    <span class="comment">//   - no other need for LOAD_INSTANCE</span></div><div class="line">    <span class="comment">// case 2. traditional classloaders that break the classloader object lock</span></div><div class="line">    <span class="comment">//    as a deadlock workaround. Detection of this case requires that</span></div><div class="line">    <span class="comment">//    this check is done while holding the classloader object lock,</span></div><div class="line">    <span class="comment">//    and that lock is still held when calling classloader's loadClass.</span></div><div class="line">    <span class="comment">//    For these classloaders, we ensure that the first requestor</span></div><div class="line">    <span class="comment">//    completes the load and other requestors wait for completion.</span></div><div class="line">    <span class="comment">// case 3. UnsyncloadClass - don't use objectLocker</span></div><div class="line">    <span class="comment">//    With this flag, we allow parallel classloading of a</span></div><div class="line">    <span class="comment">//    class/classloader pair</span></div><div class="line">    <span class="comment">// case4. Bootstrap classloader - don't own objectLocker</span></div><div class="line">    <span class="comment">//    This classloader supports parallelism at the classloader level,</span></div><div class="line">    <span class="comment">//    but only allows a single load of a class/classloader pair.</span></div><div class="line">    <span class="comment">//    No performance benefit and no deadlock issues.</span></div><div class="line">    <span class="comment">// case 5. parallelCapable user level classloaders - without objectLocker</span></div><div class="line">    <span class="comment">//    Allow parallel classloading of a class/classloader pair</span></div><div class="line"></div><div class="line">    &#123;</div><div class="line">      <span class="function">MutexLocker <span class="title">mu</span><span class="params">(SystemDictionary_lock, THREAD)</span></span>;</div><div class="line">      <span class="keyword">if</span> (class_loader.is_null() || !is_parallelCapable(class_loader)) &#123;</div><div class="line">        PlaceholderEntry* oldprobe = placeholders()-&gt;get_entry(p_index, p_hash, name, loader_data);</div><div class="line">        <span class="keyword">if</span> (oldprobe) &#123;</div><div class="line">          <span class="comment">// only need check_seen_thread once, not on each loop</span></div><div class="line">          <span class="comment">// 6341374 java/lang/Instrument with -Xcomp</span></div><div class="line">          <span class="keyword">if</span> (oldprobe-&gt;check_seen_thread(THREAD, PlaceholderTable::LOAD_INSTANCE)) &#123;</div><div class="line">            throw_circularity_error = <span class="literal">true</span>;</div><div class="line">          &#125; <span class="keyword">else</span> &#123;</div><div class="line">            <span class="comment">// case 1: traditional: should never see load_in_progress.</span></div><div class="line">            <span class="keyword">while</span> (!class_has_been_loaded &amp;&amp; oldprobe &amp;&amp; oldprobe-&gt;instance_load_in_progress()) &#123;</div><div class="line"></div><div class="line">              <span class="comment">// case 4: bootstrap classloader: prevent futile classloading,</span></div><div class="line">              <span class="comment">// wait on first requestor</span></div><div class="line">              <span class="keyword">if</span> (class_loader.is_null()) &#123;</div><div class="line">                SystemDictionary_lock-&gt;wait();</div><div class="line">              &#125; <span class="keyword">else</span> &#123;</div><div class="line">              <span class="comment">// case 2: traditional with broken classloader lock. wait on first</span></div><div class="line">              <span class="comment">// requestor.</span></div><div class="line">                double_lock_wait(lockObject, THREAD);</div><div class="line">              &#125;</div><div class="line">              <span class="comment">// Check if classloading completed while we were waiting</span></div><div class="line">              Klass* check = find_class(d_index, d_hash, name, loader_data);</div><div class="line">              <span class="keyword">if</span> (check != <span class="literal">NULL</span>) &#123;</div><div class="line">                <span class="comment">// Klass is already loaded, so just return it</span></div><div class="line">                k = instanceKlassHandle(THREAD, check);</div><div class="line">                class_has_been_loaded = <span class="literal">true</span>;</div><div class="line">              &#125;</div><div class="line">              <span class="comment">// check if other thread failed to load and cleaned up</span></div><div class="line">              oldprobe = placeholders()-&gt;get_entry(p_index, p_hash, name, loader_data);</div><div class="line">            &#125;</div><div class="line">          &#125;</div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line">      <span class="comment">// All cases: add LOAD_INSTANCE holding SystemDictionary_lock</span></div><div class="line">      <span class="comment">// case 3: UnsyncloadClass || case 5: parallelCapable: allow competing threads to try</span></div><div class="line">      <span class="comment">// LOAD_INSTANCE in parallel</span></div><div class="line"></div><div class="line">      <span class="keyword">if</span> (!throw_circularity_error &amp;&amp; !class_has_been_loaded) &#123;</div><div class="line">        PlaceholderEntry* newprobe = placeholders()-&gt;find_and_add(p_index, p_hash, name, loader_data, PlaceholderTable::LOAD_INSTANCE, <span class="literal">NULL</span>, THREAD);</div><div class="line">        load_instance_added = <span class="literal">true</span>;</div><div class="line">        <span class="comment">// For class loaders that do not acquire the classloader object lock,</span></div><div class="line">        <span class="comment">// if they did not catch another thread holding LOAD_INSTANCE,</span></div><div class="line">        <span class="comment">// need a check analogous to the acquire ObjectLocker/find_class</span></div><div class="line">        <span class="comment">// i.e. now that we hold the LOAD_INSTANCE token on loading this class/CL</span></div><div class="line">        <span class="comment">// one final check if the load has already completed</span></div><div class="line">        <span class="comment">// class loaders holding the ObjectLock shouldn't find the class here</span></div><div class="line">        Klass* check = find_class(d_index, d_hash, name, loader_data);</div><div class="line">        <span class="keyword">if</span> (check != <span class="literal">NULL</span>) &#123;</div><div class="line">        <span class="comment">// Klass is already loaded, so return it after checking/adding protection domain</span></div><div class="line">          k = instanceKlassHandle(THREAD, check);</div><div class="line">          class_has_been_loaded = <span class="literal">true</span>;</div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">// must throw error outside of owning lock</span></div><div class="line">    <span class="keyword">if</span> (throw_circularity_error) &#123;</div><div class="line">      assert(!HAS_PENDING_EXCEPTION &amp;&amp; load_instance_added == <span class="literal">false</span>,<span class="string">"circularity error cleanup"</span>);</div><div class="line">      <span class="function">ResourceMark <span class="title">rm</span><span class="params">(THREAD)</span></span>;</div><div class="line">      THROW_MSG_NULL(vmSymbols::java_lang_ClassCircularityError(), name-&gt;as_C_string());</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (!class_has_been_loaded) &#123;</div><div class="line"></div><div class="line">      <span class="comment">// Do actual loading</span></div><div class="line">      k = load_instance_class(name, class_loader, THREAD);</div><div class="line"></div><div class="line">      <span class="comment">// For UnsyncloadClass only</span></div><div class="line">      <span class="comment">// If they got a linkageError, check if a parallel class load succeeded.</span></div><div class="line">      <span class="comment">// If it did, then for bytecode resolution the specification requires</span></div><div class="line">      <span class="comment">// that we return the same result we did for the other thread, i.e. the</span></div><div class="line">      <span class="comment">// successfully loaded InstanceKlass</span></div><div class="line">      <span class="comment">// Should not get here for classloaders that support parallelism</span></div><div class="line">      <span class="comment">// with the new cleaner mechanism, even with AllowParallelDefineClass</span></div><div class="line">      <span class="comment">// Bootstrap goes through here to allow for an extra guarantee check</span></div><div class="line">      <span class="keyword">if</span> (UnsyncloadClass || (class_loader.is_null())) &#123;</div><div class="line">        <span class="keyword">if</span> (k.is_null() &amp;&amp; HAS_PENDING_EXCEPTION</div><div class="line">          &amp;&amp; PENDING_EXCEPTION-&gt;is_a(SystemDictionary::LinkageError_klass())) &#123;</div><div class="line">          <span class="function">MutexLocker <span class="title">mu</span><span class="params">(SystemDictionary_lock, THREAD)</span></span>;</div><div class="line">          Klass* check = find_class(d_index, d_hash, name, loader_data);</div><div class="line">          <span class="keyword">if</span> (check != <span class="literal">NULL</span>) &#123;</div><div class="line">            <span class="comment">// Klass is already loaded, so just use it</span></div><div class="line">            k = instanceKlassHandle(THREAD, check);</div><div class="line">            CLEAR_PENDING_EXCEPTION;</div><div class="line">            guarantee((!class_loader.is_null()), <span class="string">"dup definition for bootstrap loader?"</span>);</div><div class="line">          &#125;</div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line"></div><div class="line">      <span class="comment">// If everything was OK (no exceptions, no null return value), and</span></div><div class="line">      <span class="comment">// class_loader is NOT the defining loader, do a little more bookkeeping.</span></div><div class="line">      <span class="keyword">if</span> (!HAS_PENDING_EXCEPTION &amp;&amp; !k.is_null() &amp;&amp;</div><div class="line">        k-&gt;class_loader() != class_loader()) &#123;</div><div class="line"></div><div class="line">        check_constraints(d_index, d_hash, k, class_loader, <span class="literal">false</span>, THREAD);</div><div class="line"></div><div class="line">        <span class="comment">// Need to check for a PENDING_EXCEPTION again; check_constraints</span></div><div class="line">        <span class="comment">// can throw and doesn't use the CHECK macro.</span></div><div class="line">        <span class="keyword">if</span> (!HAS_PENDING_EXCEPTION) &#123;</div><div class="line">          &#123; <span class="comment">// Grabbing the Compile_lock prevents systemDictionary updates</span></div><div class="line">            <span class="comment">// during compilations.</span></div><div class="line">            <span class="function">MutexLocker <span class="title">mu</span><span class="params">(Compile_lock, THREAD)</span></span>;</div><div class="line">            update_dictionary(d_index, d_hash, p_index, p_hash,</div><div class="line">                              k, class_loader, THREAD);</div><div class="line">          &#125;</div><div class="line"></div><div class="line">          <span class="keyword">if</span> (JvmtiExport::should_post_class_load()) &#123;</div><div class="line">            Thread *thread = THREAD;</div><div class="line">            assert(thread-&gt;is_Java_thread(), <span class="string">"thread-&gt;is_Java_thread()"</span>);</div><div class="line">            JvmtiExport::post_class_load((JavaThread *) thread, k());</div><div class="line">          &#125;</div><div class="line">        &#125;</div><div class="line">      &#125;</div><div class="line">    &#125; <span class="comment">// load_instance_class loop</span></div><div class="line"></div><div class="line">    <span class="keyword">if</span> (load_instance_added == <span class="literal">true</span>) &#123;</div><div class="line">      <span class="comment">// clean up placeholder entries for LOAD_INSTANCE success or error</span></div><div class="line">      <span class="comment">// This brackets the SystemDictionary updates for both defining</span></div><div class="line">      <span class="comment">// and initiating loaders</span></div><div class="line">      <span class="function">MutexLocker <span class="title">mu</span><span class="params">(SystemDictionary_lock, THREAD)</span></span>;</div><div class="line">      placeholders()-&gt;find_and_remove(p_index, p_hash, name, loader_data, PlaceholderTable::LOAD_INSTANCE, THREAD);</div><div class="line">      SystemDictionary_lock-&gt;notify_all();</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="keyword">if</span> (HAS_PENDING_EXCEPTION || k.is_null()) &#123;</div><div class="line">    <span class="keyword">return</span> <span class="literal">NULL</span>;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  post_class_load_event(class_load_start_time, k, class_loader);</div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> ASSERT</span></div><div class="line">  &#123;</div><div class="line">    ClassLoaderData* loader_data = k-&gt;class_loader_data();</div><div class="line">    <span class="function">MutexLocker <span class="title">mu</span><span class="params">(SystemDictionary_lock, THREAD)</span></span>;</div><div class="line">    Klass* kk = find_class(name, loader_data);</div><div class="line">    assert(kk == k(), <span class="string">"should be present in dictionary"</span>);</div><div class="line">  &#125;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line"></div><div class="line">  <span class="comment">// return if the protection domain in NULL</span></div><div class="line">  <span class="keyword">if</span> (protection_domain() == <span class="literal">NULL</span>) <span class="keyword">return</span> k();</div><div class="line"></div><div class="line">  <span class="comment">// Check the protection domain has the right access</span></div><div class="line">  &#123;</div><div class="line">    <span class="function">MutexLocker <span class="title">mu</span><span class="params">(SystemDictionary_lock, THREAD)</span></span>;</div><div class="line">    <span class="comment">// Note that we have an entry, and entries can be deleted only during GC,</span></div><div class="line">    <span class="comment">// so we cannot allow GC to occur while we're holding this entry.</span></div><div class="line">    <span class="comment">// We're using a No_Safepoint_Verifier to catch any place where we</span></div><div class="line">    <span class="comment">// might potentially do a GC at all.</span></div><div class="line">    <span class="comment">// Dictionary::do_unloading() asserts that classes in SD are only</span></div><div class="line">    <span class="comment">// unloaded at a safepoint. Anonymous classes are not in SD.</span></div><div class="line">    No_Safepoint_Verifier nosafepoint;</div><div class="line">    <span class="keyword">if</span> (dictionary()-&gt;is_valid_protection_domain(d_index, d_hash, name,</div><div class="line">                                                 loader_data,</div><div class="line">                                                 protection_domain)) &#123;</div><div class="line">      <span class="keyword">return</span> k();</div><div class="line">    &#125;</div><div class="line">  &#125;</div><div class="line"></div><div class="line">  <span class="comment">// Verify protection domain. If it fails an exception is thrown</span></div><div class="line">  validate_protection_domain(k, class_loader, protection_domain, CHECK_NULL);</div><div class="line"></div><div class="line">  <span class="keyword">return</span> k();</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>Object类文件在虚拟机初始化时就开始加载，此时classloader为null，表示系统加载器。虚拟机使用了系统字典表存储已经加载的类，字典使用了hash算法，hash算法复杂度在O(logN)，满足大部分对性能要求严格的场景，所以hash算法可以常见在系统级软件系统中。<br>我们详细描述一下加载过程：</p>
+<ol>
+<li>从代码中，我们需要注意的是，一个类在字典表是否一致，主要有根据以下元素进行hash：</li>
+</ol>
+<ul>
+<li>名称</li>
+<li>类加载器<br>所以，我们知道相同类加载器加载的类相同，不同类加载器加载的类是不一致的。</li>
+</ul>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2016/09/23/jvm/classloader_1/" class="archive-article-date">
+  	<time datetime="2016-09-23T03:30:40.000Z" itemprop="datePublished"><i class="icon-clock"></i>2016-09-23</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/JVM/">JVM</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/JAVA/">JAVA</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2016/09/23/jvm/jvm-hash-1/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          JVM之Hash算法
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2016/09/23/jvm/java-xx-command-NativeMemoryTracking/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Java 命令行---（NativeMemoryTracking）</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="jvm/classloader_1" data-title="JVM ClassLoader机制" data-url="http://yoursite.com/2016/09/23/jvm/classloader_1/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2017 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Hadoop-Eagle-Storm/" style="font-size: 10px;">Hadoop Eagle Storm</a> <a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/Hdfs/" style="font-size: 13.33px;">Hdfs</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a> <a href="/tags/OpenJDK/" style="font-size: 13.33px;">OpenJDK</a> <a href="/tags/Phoenix/" style="font-size: 10px;">Phoenix</a> <a href="/tags/algorithm/" style="font-size: 16.67px;">algorithm</a> <a href="/tags/streamset/" style="font-size: 10px;">streamset</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>

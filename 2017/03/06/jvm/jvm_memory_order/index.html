@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="概述在多核心计算机中保持顺序是很复杂的一件事情,特别是对共享对象的访问,在Java中提供了多种机制的实现,让处理器能够看到一个一致的顺序.我们在此讨论怎么提供一个高效的同步原语.
+背景计算机为了高效的运行,通常允许处理器看到的memory order和我们代码中表现的不一致,如--thread1[store n1][load n2][test n2 and clear n1]...[store n">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Corner XX daily log">
+<meta property="og:url" content="http://yoursite.com/2017/03/06/jvm/jvm_memory_order/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="概述在多核心计算机中保持顺序是很复杂的一件事情,特别是对共享对象的访问,在Java中提供了多种机制的实现,让处理器能够看到一个一致的顺序.我们在此讨论怎么提供一个高效的同步原语.
+背景计算机为了高效的运行,通常允许处理器看到的memory order和我们代码中表现的不一致,如--thread1[store n1][load n2][test n2 and clear n1]...[store n">
+<meta property="og:updated_time" content="2017-03-07T07:30:35.407Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Corner XX daily log">
+<meta name="twitter:description" content="概述在多核心计算机中保持顺序是很复杂的一件事情,特别是对共享对象的访问,在Java中提供了多种机制的实现,让处理器能够看到一个一致的顺序.我们在此讨论怎么提供一个高效的同步原语.
+背景计算机为了高效的运行,通常允许处理器看到的memory order和我们代码中表现的不一致,如--thread1[store n1][load n2][test n2 and clear n1]...[store n">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-jvm/jvm_memory_order" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在多核心计算机中保持顺序是很复杂的一件事情,特别是对共享对象的访问,在Java中提供了多种机制的实现,让处理器能够看到一个一致的顺序.我们在此讨论怎么提供一个高效的同步原语.</p>
+<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>计算机为了高效的运行,通常允许处理器看到的memory order和我们代码中表现的不一致,如<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">--thread1</div><div class="line">[store n1]</div><div class="line">[load n2]</div><div class="line">[test n2 and clear n1]</div><div class="line"></div><div class="line">...</div><div class="line"></div><div class="line">[store n2]</div><div class="line"></div><div class="line">--thread2</div><div class="line">[store n2]</div><div class="line">[load n1]</div><div class="line">[test n1 and clean n2]</div><div class="line"></div><div class="line">...</div><div class="line"></div><div class="line">[store n1]</div></pre></td></tr></table></figure></p>
+<p>由于处理器的memory oder的不一致,导致这段程序在多处理器中是不对的.这个会导致访问共享区的不一致,这里需要程序员做一些特殊的处理.<br>为了验证这个场景,我们来看一个例子.</p>
+<h2 id="单处理器上的例子"><a href="#单处理器上的例子" class="headerlink" title="单处理器上的例子"></a>单处理器上的例子</h2><figure class="highlight c"><table><tr><td class="code"><pre><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;pthread.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;execinfo.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;signal.h&gt;</span></span></div><div class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></div><div class="line"></div><div class="line"><span class="keyword">struct</span> FLAG_STATE &#123;</div><div class="line">	<span class="keyword">volatile</span> <span class="keyword">int</span> flag;</div><div class="line"></div><div class="line">	<span class="keyword">char</span> dummy[<span class="number">120</span>]; <span class="comment">// 缓存线对齐,避免false sharing.</span></div><div class="line">&#125; g[<span class="number">2</span>];</div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> true 1</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> false 0</span></div><div class="line"><span class="meta">#<span class="meta-keyword">define</span> FENCE __asm__ volatile (<span class="meta-string">"mfence"</span> : : : <span class="meta-string">"memory"</span>);</span></div><div class="line"></div><div class="line"><span class="comment">//volatile</span></div><div class="line"><span class="keyword">volatile</span> <span class="keyword">int</span> c = <span class="number">0</span>;</div><div class="line"></div><div class="line"><span class="keyword">volatile</span> <span class="keyword">char</span> lock_word = <span class="number">0</span>;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">doSomething</span><span class="params">()</span> </span>&#123;</div><div class="line">	c++;</div><div class="line">	c--;</div><div class="line"></div><div class="line">	<span class="keyword">if</span> (c != <span class="number">0</span>)</div><div class="line">		<span class="built_in">printf</span>(<span class="string">"get fail %d\n"</span>, c);</div><div class="line"></div><div class="line">	FENCE;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">volatile</span> <span class="keyword">int</span> turn = <span class="number">0</span>;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">my_lock</span><span class="params">(<span class="keyword">int</span> tid)</span> </span>&#123;</div><div class="line">	<span class="keyword">int</span> other = <span class="number">1</span> - tid;</div><div class="line"></div><div class="line">	g[tid].flag = <span class="literal">true</span>; <span class="comment">// I want in the CS.</span></div><div class="line"></div><div class="line">	<span class="keyword">while</span> (<span class="literal">true</span> == g[other].flag) &#123;</div><div class="line">		<span class="comment">//</span></div><div class="line">		<span class="comment">// The other guy is in the CS or wants in.</span></div><div class="line">		<span class="comment">//</span></div><div class="line">		<span class="keyword">if</span> (turn != tid) &#123;</div><div class="line">			<span class="comment">// he said he wants it, but hasn't given me my turn yet.</span></div><div class="line">			<span class="comment">//</span></div><div class="line">			<span class="comment">// let him have a chance.</span></div><div class="line">			<span class="comment">//</span></div><div class="line">			g[tid].flag = <span class="literal">false</span>;</div><div class="line"></div><div class="line">			<span class="comment">// wait till he gives me my turn</span></div><div class="line">			<span class="keyword">while</span> (turn != tid) &#123;</div><div class="line">			&#125;</div><div class="line"></div><div class="line">			<span class="comment">// he's about to give up his turn or has, so I can say I want it again.</span></div><div class="line">			<span class="comment">//</span></div><div class="line">			<span class="comment">// I'll now spin on his flag changing (though I could miss it if</span></div><div class="line">			<span class="comment">// unlucky and have to start all over if he tries again fast).</span></div><div class="line">			<span class="comment">//</span></div><div class="line">			g[tid].flag = <span class="literal">true</span>;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">my_unlock</span><span class="params">(<span class="keyword">int</span> tid)</span> </span>&#123;</div><div class="line">	<span class="keyword">int</span> other = <span class="number">1</span> - tid;</div><div class="line"></div><div class="line">	turn = other;</div><div class="line"></div><div class="line">	g[tid].flag = <span class="literal">false</span>;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">run1</span><span class="params">(<span class="keyword">int</span> tid)</span> </span>&#123;</div><div class="line">	my_lock(tid);</div><div class="line">	<span class="comment">//...</span></div><div class="line">	doSomething();</div><div class="line">	my_unlock(tid);</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> *<span class="title">thread1</span><span class="params">(<span class="keyword">void</span> *ptr)</span> </span>&#123;</div><div class="line">	<span class="keyword">int</span> tid = (<span class="keyword">int</span>) ptr;</div><div class="line">	<span class="keyword">while</span> (<span class="number">1</span>)</div><div class="line">		run1(tid);</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">run2</span><span class="params">(<span class="keyword">int</span> tid)</span> </span>&#123;</div><div class="line">	my_lock(tid);</div><div class="line">	<span class="comment">//...</span></div><div class="line">	doSomething();</div><div class="line"></div><div class="line">	my_unlock(tid);</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">void</span> *<span class="title">thread2</span><span class="params">(<span class="keyword">void</span> *ptr)</span> </span>&#123;</div><div class="line">	<span class="keyword">int</span> tid = (<span class="keyword">int</span>) ptr;</div><div class="line"></div><div class="line">	<span class="keyword">while</span> (<span class="number">1</span>)</div><div class="line">		run2(tid);</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</div><div class="line"></div><div class="line">	<span class="keyword">pthread_t</span> thr1, thr2;</div><div class="line">	<span class="keyword">int</span> t1 = <span class="number">0</span>;</div><div class="line">	<span class="keyword">int</span> t2 = <span class="number">1</span>;</div><div class="line"></div><div class="line">	pthread_create(&amp;thr1, <span class="literal">NULL</span>, thread1, (<span class="keyword">void</span> *) t1);</div><div class="line"></div><div class="line">	pthread_create(&amp;thr2, <span class="literal">NULL</span>, thread2, (<span class="keyword">void</span> *) t2);</div><div class="line"></div><div class="line">	pthread_join(thr1, <span class="literal">NULL</span>);</div><div class="line">	pthread_join(thr2, <span class="literal">NULL</span>);</div><div class="line"></div><div class="line">	<span class="keyword">return</span> EXIT_SUCCESS;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>我们通过一下命令运行:<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">taskset -c 1 ./test_c</div></pre></td></tr></table></figure></p>
+<p>这段程序没有任何问题,也不会打印出”get fail”,这是因为在单处理器上这种memory order是一致的,处理器看到的内存内容是一致的.</p>
+<h3 id="多处理器的例子"><a href="#多处理器的例子" class="headerlink" title="多处理器的例子"></a>多处理器的例子</h3><p>我们运行一样的例子<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">./test_c</div></pre></td></tr></table></figure></p>
+<p>这段程序此时就会打印出”get fail”,说明我们通过此种无锁的保证共享区的代码失效了.这里就是我们描述的memory order导致的共享区被破坏的情况,在intel文档中说明,由于store buffer的存在,处理器为了性能允许store可以被后续的load乱序执行,导致不同处理器看到的内存顺序和我们的代码是不一致的.那我们怎么解决这个问题呢?</p>
+<h3 id="通过内存屏障"><a href="#通过内存屏障" class="headerlink" title="通过内存屏障"></a>通过内存屏障</h3><p>内存屏障是处理器为了解决memory order所带来问题的一种解决方案,允许处理器直接刷新store buffer,这样不同处理器看到的memory order是一致的了.</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">--thread1</div><div class="line">[store n1]</div><div class="line">[memory barrier]</div><div class="line">[load n2]</div><div class="line">[test n2 and clear n1]</div><div class="line"></div><div class="line">...</div><div class="line"></div><div class="line">[store n2]</div><div class="line"></div><div class="line">--thread2</div><div class="line">[store n2]</div><div class="line">[memory barrier]</div><div class="line">[load n1]</div><div class="line">[test n1 and clean n2]</div><div class="line"></div><div class="line">...</div><div class="line"></div><div class="line">[store n1]</div></pre></td></tr></table></figure>
+<p>这样我们增加了内存屏障后,不管thread1和thread2得到变量的值都是最新的了.从而符合我们所需要的逻辑<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">#include &lt;stdio.h&gt;</div><div class="line">#include &lt;stdlib.h&gt;</div><div class="line">#include &lt;pthread.h&gt;</div><div class="line">#include &lt;execinfo.h&gt;</div><div class="line">#include &lt;signal.h&gt;</div><div class="line">#include &lt;unistd.h&gt;</div><div class="line"></div><div class="line">struct FLAG_STATE &#123;</div><div class="line">	volatile int flag;</div><div class="line"></div><div class="line">	char dummy[120]; // 缓存线对齐,避免false sharing.</div><div class="line">&#125; g[2];</div><div class="line"></div><div class="line">#define true 1</div><div class="line">#define false 0</div><div class="line">#define FENCE __asm__ volatile (&quot;mfence&quot; : : : &quot;memory&quot;);</div><div class="line"></div><div class="line">//volatile</div><div class="line">volatile int c = 0;</div><div class="line"></div><div class="line">volatile char lock_word = 0;</div><div class="line"></div><div class="line">void doSomething() &#123;</div><div class="line">	c++;</div><div class="line">	c--;</div><div class="line"></div><div class="line">	if (c != 0)</div><div class="line">		printf(&quot;get fail %d\n&quot;, c);</div><div class="line"></div><div class="line">	FENCE;</div><div class="line">&#125;</div><div class="line"></div><div class="line">volatile int turn = 0;</div><div class="line"></div><div class="line">void my_lock(int tid) &#123;</div><div class="line">	int other = 1 - tid;</div><div class="line"></div><div class="line">	g[tid].flag = true; // I want in the CS.</div><div class="line"></div><div class="line">	FENCE;</div><div class="line"></div><div class="line">	while (true == g[other].flag) &#123;</div><div class="line">		//</div><div class="line">		// The other guy is in the CS or wants in.</div><div class="line">		//</div><div class="line">		if (turn != tid) &#123;</div><div class="line">			// he said he wants it, but hasn&apos;t given me my turn yet.</div><div class="line">			//</div><div class="line">			// let him have a chance.</div><div class="line">			//</div><div class="line">			g[tid].flag = false;</div><div class="line"></div><div class="line">			// wait till he gives me my turn</div><div class="line">			while (turn != tid) &#123;</div><div class="line">			&#125;</div><div class="line"></div><div class="line">			// he&apos;s about to give up his turn or has, so I can say I want it again.</div><div class="line">			//</div><div class="line">			// I&apos;ll now spin on his flag changing (though I could miss it if</div><div class="line">			// unlucky and have to start all over if he tries again fast).</div><div class="line">			//</div><div class="line">			g[tid].flag = true;</div><div class="line">			FENCE;   //此处同样需要一个内存屏障</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line">void my_unlock(int tid) &#123;</div><div class="line">	int other = 1 - tid;</div><div class="line"></div><div class="line">	turn = other;</div><div class="line"></div><div class="line">	g[tid].flag = false;</div><div class="line">&#125;</div><div class="line"></div><div class="line">void run1(int tid) &#123;</div><div class="line">	my_lock(tid);</div><div class="line">	//...</div><div class="line">	doSomething();</div><div class="line">	my_unlock(tid);</div><div class="line">&#125;</div><div class="line"></div><div class="line">void *thread1(void *ptr) &#123;</div><div class="line">	int tid = (int) ptr;</div><div class="line">	while (1)</div><div class="line">		run1(tid);</div><div class="line">&#125;</div><div class="line"></div><div class="line">void run2(int tid) &#123;</div><div class="line">	my_lock(tid);</div><div class="line">	//...</div><div class="line">	doSomething();</div><div class="line"></div><div class="line">	my_unlock(tid);</div><div class="line">&#125;</div><div class="line"></div><div class="line">void *thread2(void *ptr) &#123;</div><div class="line">	int tid = (int) ptr;</div><div class="line"></div><div class="line">	while (1)</div><div class="line">		run2(tid);</div><div class="line">&#125;</div><div class="line"></div><div class="line">int main(void) &#123;</div><div class="line"></div><div class="line">	pthread_t thr1, thr2;</div><div class="line">	int t1 = 0;</div><div class="line">	int t2 = 1;</div><div class="line"></div><div class="line">	pthread_create(&amp;thr1, NULL, thread1, (void *) t1);</div><div class="line"></div><div class="line">	pthread_create(&amp;thr2, NULL, thread2, (void *) t2);</div><div class="line"></div><div class="line">	pthread_join(thr1, NULL);</div><div class="line">	pthread_join(thr2, NULL);</div><div class="line"></div><div class="line">	return EXIT_SUCCESS;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>以上是一个典型的dekker算法,dekker算法在单处理器中处理的很好,但是在多处理器中,由于memory order的不一致导致此算法会出问题,从而导致无法正常进入临界区,我在测试的过程中发现网络上只是对进入的时候做了内存屏障,但此时同样会存在问题,需要在内循环中同样介入内存屏障.<br>其中FENCE可以为:</p>
+<ol>
+<li><strong>asm</strong> volatile (“mfence” : : : “memory”);</li>
+<li><strong>asm</strong> volatile (“lock; addl $0,0(%%rsp)” : : : “cc”, “memory”);</li>
+</ol>
+<p>建议使用第二种,第二种使用lock前缀,比第一种效率要高.</p>
+<h2 id="非对称内存屏障"><a href="#非对称内存屏障" class="headerlink" title="非对称内存屏障"></a>非对称内存屏障</h2><p>通过上面的介绍,我们知道内存屏障可以用在临界区中,那我们是否还可以增强此种使用的性能呢?我们下面介绍另外一种思想,其主要思想如下:<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">fast thread                     slow thread</div><div class="line"></div><div class="line">store n1                        store n2</div><div class="line">load  n2                        fence</div><div class="line">                                mproctect page RO</div></pre></td></tr></table></figure></p>
+<p>由于thread1执行的指令比较少,此时成为fast thread,thread2执行的比较多,所以叫做slow thread,此时分以下几种情况:</p>
+<ol>
+<li>fast thread在mprotect之前执行,slow thread执行mmprotect后,看到的n1内存是最新的,mprotect将执行页修改为只读,系统会自动冲刷缓存,将fast thread的缓存冲刷会内存,系统调用返回后,slow thread将得到n1的最新状态</li>
+<li>fast thread在mprotect之后执行,由于mproctect将此页修改为只读,写此内存页,会引起中断,默认中断也会刷新处理器缓存到内存,fast thread将得到最新的n2状态,slow thread也会得到n1的最新状态.</li>
+<li>slow thread 执行mprotect后,会将之前所有写此页的缓存全部冲刷进内存.</li>
+</ol>
+<p>通过以上的方式,我们将会得到一个更加优化的方案:<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">n * fastthread + slow thread(fence+mprotect) &lt; n * slow thread(fence)</div></pre></td></tr></table></figure></p>
+<p>我们在JVM中safepoint的代码中,经常看到以下场景,利用的就是此种知识;<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">// Flush all thread states to memory</div><div class="line">if (!UseMembar) &#123;</div><div class="line">  os::serialize_thread_states();</div><div class="line">&#125;</div><div class="line"></div><div class="line">// Serialize all thread state variables</div><div class="line">void os::serialize_thread_states() &#123;</div><div class="line">  // On some platforms such as Solaris &amp; Linux, the time duration of the page</div><div class="line">  // permission restoration is observed to be much longer than expected  due to</div><div class="line">  // scheduler starvation problem etc. To avoid the long synchronization</div><div class="line">  // time and expensive page trap spinning, &apos;SerializePageLock&apos; is used to block</div><div class="line">  // the mutator thread if such case is encountered. See bug 6546278 for details.</div><div class="line">  Thread::muxAcquire(&amp;SerializePageLock, &quot;serialize_thread_states&quot;);</div><div class="line">  os::protect_memory((char *)os::get_memory_serialize_page(),</div><div class="line">                     os::vm_page_size(), MEM_PROT_READ);</div><div class="line">  os::protect_memory((char *)os::get_memory_serialize_page(),</div><div class="line">                     os::vm_page_size(), MEM_PROT_RW);</div><div class="line">  Thread::muxRelease(&amp;SerializePageLock);</div><div class="line">&#125;</div><div class="line"></div><div class="line">//Java Thread状态转换</div><div class="line">    // Make sure new state is seen by VM thread</div><div class="line">    if (os::is_MP()) &#123;</div><div class="line">      if (UseMembar) &#123;</div><div class="line">        // Force a fence between the write above and read below</div><div class="line">        OrderAccess::fence();</div><div class="line">      &#125; else &#123;</div><div class="line">        // store to serialize page so VM thread can do pseudo remote membar</div><div class="line">        os::write_memory_serialize_page(thread);</div><div class="line">      &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">  static inline void write_memory_serialize_page(JavaThread *thread) &#123;</div><div class="line">    uintptr_t page_offset = ((uintptr_t)thread &gt;&gt;</div><div class="line">                            get_serialize_page_shift_count()) &amp;</div><div class="line">                            get_serialize_page_mask();</div><div class="line">    *(volatile int32_t *)((uintptr_t)_mem_serialize_page+page_offset) = 1;</div><div class="line">  &#125;</div></pre></td></tr></table></figure></p>
+<p>首先,VMThread会把serialize page通过系统调用修改为只读,Java线程在状态转换的时候会调用os::write_memory_serialize_page写serialize page,此时会把之前所有写此页的缓存写入内存,VMThread后续将会得到最新的所有线程状态.</p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2017/03/06/jvm/jvm_memory_order/" class="archive-article-date">
+  	<time datetime="2017-03-06T08:44:05.619Z" itemprop="datePublished"><i class="icon-clock"></i>2017-03-06</time>
+</a>
+      
+      
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2017/03/07/jvm/jvm_object_init_call/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          (no title)
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/02/07/eagle/eagle-IncompatibleClassChangeError/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">log4j和log4j-over-slf4j-1.6.6.jar不兼容问题排查</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="jvm/jvm_memory_order" data-title="" data-url="http://yoursite.com/2017/03/06/jvm/jvm_memory_order/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2017 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Hadoop-Eagle-Storm/" style="font-size: 10px;">Hadoop Eagle Storm</a> <a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/Hdfs/" style="font-size: 13.33px;">Hdfs</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a> <a href="/tags/OpenJDK/" style="font-size: 13.33px;">OpenJDK</a> <a href="/tags/Phoenix/" style="font-size: 10px;">Phoenix</a> <a href="/tags/algorithm/" style="font-size: 16.67px;">algorithm</a> <a href="/tags/streamset/" style="font-size: 10px;">streamset</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>

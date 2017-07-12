@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>log4j和log4j-over-slf4j-1.6.6.jar不兼容问题排查 | Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="概述部署eagle过程中，提交storm任务发现出现java.lang.IncompatibleClassChangeError错误，以下是问题原因和排查过程,错误栈如下：java.util.concurrent.ExecutionException: java.lang.IncompatibleClassChangeError: Implementing class        at java">
+<meta property="og:type" content="article">
+<meta property="og:title" content="log4j和log4j-over-slf4j-1.6.6.jar不兼容问题排查">
+<meta property="og:url" content="http://yoursite.com/2017/02/07/eagle/eagle-IncompatibleClassChangeError/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="概述部署eagle过程中，提交storm任务发现出现java.lang.IncompatibleClassChangeError错误，以下是问题原因和排查过程,错误栈如下：java.util.concurrent.ExecutionException: java.lang.IncompatibleClassChangeError: Implementing class        at java">
+<meta property="og:updated_time" content="2017-05-13T09:47:18.928Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="log4j和log4j-over-slf4j-1.6.6.jar不兼容问题排查">
+<meta name="twitter:description" content="概述部署eagle过程中，提交storm任务发现出现java.lang.IncompatibleClassChangeError错误，以下是问题原因和排查过程,错误栈如下：java.util.concurrent.ExecutionException: java.lang.IncompatibleClassChangeError: Implementing class        at java">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-eagle/eagle-IncompatibleClassChangeError" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      log4j和log4j-over-slf4j-1.6.6.jar不兼容问题排查
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>部署eagle过程中，提交storm任务发现出现java.lang.IncompatibleClassChangeError错误，以下是问题原因和排查过程,错误栈如下：<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">java.util.concurrent.ExecutionException: java.lang.IncompatibleClassChangeError: Implementing class</div><div class="line">        at java.util.concurrent.FutureTask.report(FutureTask.java:122) ~[na:1.8.0_101]</div><div class="line">        at java.util.concurrent.FutureTask.get(FutureTask.java:206) ~[na:1.8.0_101]</div><div class="line">        at org.apache.eagle.alert.engine.publisher.email.AlertEmailGenerator.sendAlertEmail(AlertEmailGenerator.java:89) [stormjar.jar:na]</div><div class="line">        at org.apache.eagle.alert.engine.publisher.email.AlertEmailGenerator.sendAlertEmail(AlertEmailGenerator.java:55) [stormjar.jar:na]</div><div class="line">        at org.apache.eagle.alert.engine.publisher.impl.AlertEmailPublisher.onAlert(AlertEmailPublisher.java:128) [stormjar.jar:na]</div><div class="line">        at org.apache.eagle.alert.engine.publisher.impl.AlertPublisherImpl.notifyAlert(AlertPublisherImpl.java:88) [stormjar.jar:na]</div><div class="line">        at org.apache.eagle.alert.engine.publisher.impl.AlertPublisherImpl.nextEvent(AlertPublisherImpl.java:70) [stormjar.jar:na]</div><div class="line">        at org.apache.eagle.alert.engine.runner.AlertPublisherBolt.execute(AlertPublisherBolt.java:92) [stormjar.jar:na]</div><div class="line">        at backtype.storm.daemon.executor$fn__3441$tuple_action_fn__3443.invoke(executor.clj:633) [storm-core-0.9.3.jar:0.9.3]</div><div class="line">        at backtype.storm.daemon.executor$mk_task_receiver$fn__3364.invoke(executor.clj:401) [storm-core-0.9.3.jar:0.9.3]</div><div class="line">        at backtype.storm.disruptor$clojure_handler$reify__1447.onEvent(disruptor.clj:58) [storm-core-0.9.3.jar:0.9.3]</div><div class="line">        at backtype.storm.utils.DisruptorQueue.consumeBatchToCursor(DisruptorQueue.java:125) [storm-core-0.9.3.jar:0.9.3]</div><div class="line">        at backtype.storm.utils.DisruptorQueue.consumeBatchWhenAvailable(DisruptorQueue.java:99) [storm-core-0.9.3.jar:0.9.3]</div><div class="line">        at backtype.storm.disruptor$consume_batch_when_available.invoke(disruptor.clj:80) [storm-core-0.9.3.jar:0.9.3]</div><div class="line">        at backtype.storm.daemon.executor$fn__3441$fn__3453$fn__3500.invoke(executor.clj:748) [storm-core-0.9.3.jar:0.9.3]</div><div class="line">        at backtype.storm.util$async_loop$fn__464.invoke(util.clj:463) [storm-core-0.9.3.jar:0.9.3]</div><div class="line">        at clojure.lang.AFn.run(AFn.java:24) [clojure-1.5.1.jar:na]</div><div class="line">        at java.lang.Thread.run(Thread.java:745) [na:1.8.0_101]</div><div class="line">Caused by: java.lang.IncompatibleClassChangeError: Implementing class</div><div class="line">        at java.lang.ClassLoader.defineClass1(Native Method) ~[na:1.8.0_101]</div><div class="line">        at java.lang.ClassLoader.defineClass(ClassLoader.java:763) ~[na:1.8.0_101]</div><div class="line">        at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142) ~[na:1.8.0_101]</div><div class="line">        at java.net.URLClassLoader.defineClass(URLClassLoader.java:467) ~[na:1.8.0_101]</div><div class="line">        at java.net.URLClassLoader.access$100(URLClassLoader.java:73) ~[na:1.8.0_101]</div><div class="line">        at java.net.URLClassLoader$1.run(URLClassLoader.java:368) ~[na:1.8.0_101]</div><div class="line">        at java.net.URLClassLoader$1.run(URLClassLoader.java:362) ~[na:1.8.0_101]</div><div class="line">        at java.security.AccessController.doPrivileged(Native Method) ~[na:1.8.0_101]</div><div class="line">        at java.net.URLClassLoader.findClass(URLClassLoader.java:361) ~[na:1.8.0_101]</div><div class="line">        at java.lang.ClassLoader.loadClass(ClassLoader.java:424) ~[na:1.8.0_101]</div><div class="line">        at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:331) ~[na:1.8.0_101]</div><div class="line">        at java.lang.ClassLoader.loadClass(ClassLoader.java:357) ~[na:1.8.0_101]</div><div class="line">        at org.apache.velocity.runtime.log.Log4JLogChute.initAppender(Log4JLogChute.java:118) ~[stormjar.jar:na]</div><div class="line">        at org.apache.velocity.runtime.log.Log4JLogChute.init(Log4JLogChute.java:85) ~[stormjar.jar:na]</div><div class="line">        at org.apache.velocity.runtime.log.LogManager.createLogChute(LogManager.java:157) ~[stormjar.jar:na]</div><div class="line">        at org.apache.velocity.runtime.log.LogManager.updateLog(LogManager.java:269) ~[stormjar.jar:na]</div><div class="line">        at org.apache.velocity.runtime.RuntimeInstance.initializeLog(RuntimeInstance.java:871) ~[stormjar.jar:na]</div><div class="line">        at org.apache.velocity.runtime.RuntimeInstance.init(RuntimeInstance.java:262) ~[stormjar.jar:na]</div><div class="line">        at org.apache.velocity.app.VelocityEngine.init(VelocityEngine.java:93) ~[stormjar.jar:na]</div><div class="line">        at org.apache.eagle.alert.engine.publisher.email.EagleMailClient.&lt;init&gt;(EagleMailClient.java:57) ~[stormjar.jar:na]</div><div class="line">        at org.apache.eagle.alert.engine.publisher.email.AlertEmailSender.run(AlertEmailSender.java:87) ~[stormjar.jar:na]</div><div class="line">        at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511) ~[na:1.8.0_101]</div><div class="line">        at java.util.concurrent.FutureTask.run(FutureTask.java:266) ~[na:1.8.0_101]</div><div class="line">        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142) ~[na:1.8.0_101]</div><div class="line">        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617) ~[na:1.8.0_101]</div><div class="line">        ... 1 common frames omitted</div></pre></td></tr></table></figure></p>
+<h2 id="技术点"><a href="#技术点" class="headerlink" title="技术点"></a>技术点</h2><ol>
+<li>java命令行选项告诉加载顺序<br>Java运行时提供了一个verbose选项和TraceClassLoadingPreorder，通过传入storm的work任务提交两个命令选项“-XX:+TraceClassLoadingPreorder -verbose”获取加载类过程，由于类加载过程是迭代过程，如加载类发现父类和父接口没有加载，则优先加载父类和父接口，依次类推。verbose选项可以告诉我们那个类加载过了，没办法判断先加载的类。通过使用TraceClassLoadingPreorder选项可以获取加载的顺序。</li>
+<li>什么时候报Caused by: java.lang.IncompatibleClassChangeError: Implementing class<br>虚拟机加载类的时候在发现有继承接口信息的时候会验证类规范，如果发现继承的实体不是接口，则报出此Error。</li>
+</ol>
+<h2 id="过程"><a href="#过程" class="headerlink" title="过程"></a>过程</h2><p>通过概述中的栈信息，我们主要看<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">at org.apache.velocity.runtime.log.Log4JLogChute.initAppender(Log4JLogChute.java:118) ~[stormjar.jar:na]</div></pre></td></tr></table></figure></p>
+<p>此行主要由于在调用<strong>Log4JLogChute.initAppender</strong>方法的时候错误，在此类118行通过反编译代码如下<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">this.appender = new RollingFileAppender(layout, file, true);</div></pre></td></tr></table></figure></p>
+<p>对应字节码<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">11 new #41 &lt;org/apache/log4j/RollingFileAppender&gt;</div></pre></td></tr></table></figure></p>
+<p>我们可以知道在加载RollingFileAppender过程中出现了此类错误，怀疑加载的类不一致导致此错误。通过执行对应程序加上<strong>-XX:+TraceClassLoadingPreorder -verbose</strong>,查找RollingFileAppender类。<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">[Loading org.apache.log4j.RollingFileAppender from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_</div><div class="line">APP_SANDBOX-1-1486386532/stormjar.jar]</div><div class="line">[Loading org.apache.log4j.FileAppender from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SAN</div><div class="line">DBOX-1-1486386532/stormjar.jar]</div><div class="line">[Loading org.apache.log4j.WriterAppender from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/stormjar.jar]</div><div class="line">[Loading org.apache.log4j.AppenderSkeleton from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/stormjar.jar]</div><div class="line">[Loaded org.apache.log4j.AppenderSkeleton from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/stormjar.jar]</div><div class="line">[Loaded org.apache.log4j.WriterAppender from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/stormjar.jar]</div><div class="line">[Loaded org.apache.log4j.FileAppender from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/stormjar.jar]</div><div class="line">[Loaded org.apache.log4j.RollingFileAppender from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/stormjar.jar]</div><div class="line">[Loading org.apache.log4j.spi.ErrorHandler from file:/opt/apache-storm-0.9.3/lib/log4j-over-slf4j-1.6.6.jar]</div><div class="line">[Loaded org.apache.log4j.spi.ErrorHandler from file:/opt/apache-storm-0.9.3/lib/log4j-over-slf4j-1.6.6.jar]</div><div class="line">[Loading com.google.common.collect.Iterators from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_A</div><div class="line">PP_SANDBOX-1-1486386532/stormjar.jar]</div><div class="line">[Loading org.apache.log4j.helpers.OnlyOnceErrorHandler from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_</div><div class="line">TOPOLOGY_APP_SANDBOX-1-1486386532/stormjar.jar]</div><div class="line"></div><div class="line">...</div><div class="line"></div><div class="line">[Loading org.apache.log4j.helpers.OnlyOnceErrorHandler from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/stormjar.jar]</div><div class="line">...</div><div class="line">[Loading org.apache.log4j.helpers.OnlyOnceErrorHandler from file:/opt/apache-storm-0.9.3/storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/stormjar.jar]</div></pre></td></tr></table></figure></p>
+<p>从加载的顺序可以看到如我们所说的一致，按需加载。需要重点关注OnlyOnceErrorHandler，我们发现虚拟机一致在加载此类，一致没有成功，假设可能其父接口加载导致无法加载此类。反编译此类为<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">public class OnlyOnceErrorHandler</div><div class="line">  implements ErrorHandler</div><div class="line">&#123;</div><div class="line">...</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>我们可以看到ErrorHandler是一个接口<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">[Loading org.apache.log4j.spi.ErrorHandler from file:/opt/apache-storm-0.9.3/lib/log4j-over-slf4j-1.6.6.jar]</div><div class="line">[Loaded org.apache.log4j.spi.ErrorHandler from file:/opt/apache-storm-0.9.3/lib/log4j-over-slf4j-1.6.6.jar]</div></pre></td></tr></table></figure></p>
+<p>我们看到这个关键点，反编译对应jar的此类<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">public class ErrorHandler &#123;&#125;</div></pre></td></tr></table></figure></p>
+<p>我们可以看出加载的此类是一个具体类，而不是接口，所以虚拟机认为此类违反了java语言规范。所以出错误。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>提交到strom的包打的log4j和log4j-over-slf4j-1.6.6.jar冲突。同样log4j和log4j-over-slf4j-1.6.6.jar也有冲突，剔除storm中的log4j-over-slf4j-1.6.6.jar就好了。</p>
+<h2 id="Tips"><a href="#Tips" class="headerlink" title="Tips"></a>Tips</h2><p>在storm提交任务给supervisor执行的时候，会启动对应的worker执行，通过worker.childopts: “-Xmx768m -verbose”发现是不行了，虚拟机会一致挂住。<br>我们可以通过另外一种方法，找到对应的启动命令，比如<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">/opt/jdk1.8.0_101/bin/java -server -Xmx768m -verbose  -XX:+TraceClassLoadingPreorder -Djava.library.path=storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/resources/Linux-amd64:storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/resources:/usr/local/lib:/opt/local/lib:/usr/lib -Dlogfile.name=worker-6701.log -Dstorm.home=/opt/apache-storm-0.9.3 -Dstorm.conf.file= -Dstorm.options= -Dstorm.log.dir=/opt/apache-storm-0.9.3/logs -Dlogback.configurationFile=/opt/apache-storm-0.9.3/logback/cluster.xml -Dstorm.id=ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532 -Dworker.id=f9460422-b3e3-49f9-97d3-a5f63b949902 -Dworker.port=6701 -cp /opt/apache-storm-0.9.3/lib/json-simple-1.1.jar:/opt/apache-storm-0.9.3/lib/ring-devel-0.3.11.jar:/opt/apache-storm-0.9.3/lib/tools.logging-0.2.3.jar:/opt/apache-storm-0.9.3/lib/hiccup-0.3.6.jar:/opt/apache-storm-0.9.3/lib/commons-codec-1.6.jar:/opt/apache-storm-0.9.3/lib/commons-logging-1.1.3.jar:/opt/apache-storm-0.9.3/lib/reflectasm-1.07-shaded.jar:/opt/apache-storm-0.9.3/lib/compojure-1.1.3.jar:/opt/apache-storm-0.9.3/lib/clj-time-0.4.1.jar:/opt/apache-storm-0.9.3/lib/jersey-core-1.19.1.jar:/opt/apache-storm-0.9.3/lib/commons-lang-2.5.jar:/opt/apache-storm-0.9.3/lib/servlet-api-2.5.jar:/opt/apache-storm-0.9.3/lib/ring-jetty-adapter-0.3.11.jar:/opt/apache-storm-0.9.3/lib/jersey-client-1.19.1.jar:/opt/apache-storm-0.9.3/lib/slf4j-api-1.7.5.jar:/opt/apache-storm-0.9.3/lib/kryo-2.21.jar:/opt/apache-storm-0.9.3/lib/core.incubator-0.1.0.jar:/opt/apache-storm-0.9.3/lib/log4j-over-slf4j-1.6.6.jar:/opt/apache-storm-0.9.3/lib/jgrapht-core-0.9.0.jar:/opt/apache-storm-0.9.3/lib/clout-1.0.1.jar:/opt/apache-storm-0.9.3/lib/ring-servlet-0.3.11.jar:/opt/apache-storm-0.9.3/lib/carbonite-1.4.0.jar:/opt/apache-storm-0.9.3/lib/jetty-6.1.26.jar:/opt/apache-storm-0.9.3/lib/commons-io-2.4.jar:/opt/apache-storm-0.9.3/lib/tools.cli-0.2.4.jar:/opt/apache-storm-0.9.3/lib/logback-classic-1.0.13.jar:/opt/apache-storm-0.9.3/lib/disruptor-2.10.1.jar:/opt/apache-storm-0.9.3/lib/math.numeric-tower-0.0.1.jar:/opt/apache-storm-0.9.3/lib/minlog-1.2.jar:/opt/apache-storm-0.9.3/lib/storm-core-0.9.3.jar:/opt/apache-storm-0.9.3/lib/ring-core-1.1.5.jar:/opt/apache-storm-0.9.3/lib/clojure-1.5.1.jar:/opt/apache-storm-0.9.3/lib/chill-java-0.3.5.jar:/opt/apache-storm-0.9.3/lib/commons-fileupload-1.2.1.jar:/opt/apache-storm-0.9.3/lib/jetty-util-6.1.26.jar:/opt/apache-storm-0.9.3/lib/objenesis-1.2.jar:/opt/apache-storm-0.9.3/lib/commons-exec-1.1.jar:/opt/apache-storm-0.9.3/lib/tools.macro-0.1.0.jar:/opt/apache-storm-0.9.3/lib/logback-core-1.0.13.jar:/opt/apache-storm-0.9.3/lib/asm-4.0.jar:/opt/apache-storm-0.9.3/lib/clj-stacktrace-0.2.2.jar:/opt/apache-storm-0.9.3/lib/jline-2.11.jar:/opt/apache-storm-0.9.3/lib/joda-time-2.0.jar:/opt/apache-storm-0.9.3/lib/snakeyaml-1.11.jar:/opt/apache-storm-0.9.3/conf:storm-local/supervisor/stormdist/ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532/stormjar.jar backtype.storm.daemon.worker ALERT_UNIT_TOPOLOGY_APP_SANDBOX-1-1486386532 20329ac2-9c6f-42d3-9a6e-f9e66fe49cc1 6701 f9460422-b3e3-49f9-97d3-a5f63b949902</div></pre></td></tr></table></figure></p>
+<p>在启动此命令前需要在storm-local创建<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">mkdir -p storm-local/workers/f9460422-b3e3-49f9-97d3-a5f63b949902/pids</div></pre></td></tr></table></figure></p>
+<p>这样此worker一样可以运行，这个tips在storm-0.9.3测试可行。就可以获取加载类的反馈信息。</p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2017/02/07/eagle/eagle-IncompatibleClassChangeError/" class="archive-article-date">
+  	<time datetime="2017-02-07T02:27:43.000Z" itemprop="datePublished"><i class="icon-clock"></i>2017-02-07</time>
+</a>
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags"></i>
+		<ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hadoop-Eagle-Storm/">Hadoop Eagle Storm</a></li></ul>
+	</div>
+
+      
+	<div class="article-category tagcloud">
+	<i class="icon-price-tags"></i>
+	<a class="article-category-link" href="/categories/Hadoop/">Hadoop</a>
+	</div>
+
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2017/03/06/jvm/jvm_memory_order/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          (no title)
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/01/20/jvm/新文档/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title"></div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="eagle/eagle-IncompatibleClassChangeError" data-title="log4j和log4j-over-slf4j-1.6.6.jar不兼容问题排查" data-url="http://yoursite.com/2017/02/07/eagle/eagle-IncompatibleClassChangeError/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2017 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Hadoop-Eagle-Storm/" style="font-size: 10px;">Hadoop Eagle Storm</a> <a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/Hdfs/" style="font-size: 13.33px;">Hdfs</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a> <a href="/tags/OpenJDK/" style="font-size: 13.33px;">OpenJDK</a> <a href="/tags/Phoenix/" style="font-size: 10px;">Phoenix</a> <a href="/tags/algorithm/" style="font-size: 16.67px;">algorithm</a> <a href="/tags/streamset/" style="font-size: 10px;">streamset</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>

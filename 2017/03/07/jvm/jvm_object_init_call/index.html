@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" >
+  <title>Corner XX daily log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="从JVM理解对象初始化和调用之前也描述了Object对象初始化的过程,从类的加载和静态成员的初始化过程,我们在这里更加深入系统的介绍我们对一个对象赋值JVM所经历的过程.本章介绍一个对象的初始化过程和成员赋值的过程.
+例子package com.corner.base.jvm.bytecode;public class TestBytecode &amp;#123;//Fields order: oops">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Corner XX daily log">
+<meta property="og:url" content="http://yoursite.com/2017/03/07/jvm/jvm_object_init_call/index.html">
+<meta property="og:site_name" content="Corner XX daily log">
+<meta property="og:description" content="从JVM理解对象初始化和调用之前也描述了Object对象初始化的过程,从类的加载和静态成员的初始化过程,我们在这里更加深入系统的介绍我们对一个对象赋值JVM所经历的过程.本章介绍一个对象的初始化过程和成员赋值的过程.
+例子package com.corner.base.jvm.bytecode;public class TestBytecode &amp;#123;//Fields order: oops">
+<meta property="og:updated_time" content="2017-03-08T07:11:16.335Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Corner XX daily log">
+<meta name="twitter:description" content="从JVM理解对象初始化和调用之前也描述了Object对象初始化的过程,从类的加载和静态成员的初始化过程,我们在这里更加深入系统的介绍我们对一个对象赋值JVM所经历的过程.本章介绍一个对象的初始化过程和成员赋值的过程.
+例子package com.corner.base.jvm.bytecode;public class TestBytecode &amp;#123;//Fields order: oops">
+  
+    <link rel="alternative" href="/atom.xml" title="Corner XX daily log" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="//favicon.png">
+  
+  <script src="/style.js"></script>
+</head>
+
+<body>
+  <div id="container">
+    <div class="left-col">
+      <div class="overlay"></div>
+<div class="intrude-less">
+	<header id="header" class="inner">
+		<a href="/" class="profilepic">
+			
+			<img src="/img/suolong.png" class="js-avatar">
+			
+		</a>
+
+		<hgroup>
+		  <h1 class="header-author"><a href="/">Corner XX</a></h1>
+		</hgroup>
+
+		
+
+		<nav class="header-menu">
+			<ul>
+			
+				<li><a href="/">主页</a></li>
+	        
+			</ul>
+		</nav>
+		<nav class="header-smart-menu">
+	        
+    		
+    			
+    			<a class="js-smart-menu" data-idx="0" href="javascript:void(0)">所有文章</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="1" href="javascript:void(0)">标签</a>
+    			
+    			
+            
+    			
+    			<a class="js-smart-menu" data-idx="2" href="javascript:void(0)">关于我</a>
+    			
+    			
+            
+		</nav>
+		<nav class="header-nav">
+			<div class="social">
+				
+					<a class="github" target="_blank" href="#" title="github">github</a>
+		        
+					<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+		        
+					<a class="rss" target="_blank" href="#" title="rss">rss</a>
+		        
+					<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+		        
+			</div>
+		</nav>
+	</header>		
+</div>
+
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+  	<div class="overlay">
+  		<div class="slider-trigger"><i class="icon-list"></i></div>
+  		<h1 class="header-author js-mobile-header hide">Corner XX</h1>
+  	</div>
+	<div class="intrude-less">
+		<header id="header" class="inner">
+			<div class="profilepic">
+				
+					<img src="/img/suolong.png" class="js-avatar">
+				
+			</div>
+			<hgroup>
+			  <h1 class="header-author">Corner XX</h1>
+			</hgroup>
+			
+			<nav class="header-menu">
+				<ul>
+				
+					<li><a href="/">主页</a></li>
+		        
+				</ul>
+			</nav>
+			<nav class="header-nav">
+				<div class="social">
+					
+						<a class="github" target="_blank" href="#" title="github">github</a>
+			        
+						<a class="weibo" target="_blank" href="#" title="weibo">weibo</a>
+			        
+						<a class="rss" target="_blank" href="#" title="rss">rss</a>
+			        
+						<a class="zhihu" target="_blank" href="https://www.zhihu.com/people/cornerxx" title="zhihu">zhihu</a>
+			        
+				</div>
+			</nav>
+		</header>				
+	</div>
+</nav>
+
+      <div class="body-wrap">
+        <article id="post-jvm/jvm_object_init_call" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="从JVM理解对象初始化和调用"><a href="#从JVM理解对象初始化和调用" class="headerlink" title="从JVM理解对象初始化和调用"></a>从JVM理解对象初始化和调用</h2><p>之前也描述了Object对象初始化的过程,从类的加载和静态成员的初始化过程,我们在这里更加深入系统的介绍我们对一个对象赋值JVM所经历的过程.本章介绍一个对象的初始化过程和成员赋值的过程.</p>
+<h3 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h3><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">package com.corner.base.jvm.bytecode;</div><div class="line"></div><div class="line">public class TestBytecode &#123;</div><div class="line">//Fields order: oops, longs/doubles, ints, shorts/chars, bytes, padded fields</div><div class="line">//Fields order: longs/doubles, ints, shorts/chars, bytes, oops, padded fields</div><div class="line">//Fields allocation: oops fields in super and sub classes are together.</div><div class="line">	private String a = &quot;aa&quot;;</div><div class="line">	private short e = 1;</div><div class="line">	private char f = 1;</div><div class="line">	private byte h = 1;</div><div class="line">	private byte k = 1;</div><div class="line">	private long c= 1;</div><div class="line">	private double d = 1;</div><div class="line">	private int b = 0;</div><div class="line">	private int j = 0;</div><div class="line">	</div><div class="line">	</div><div class="line">	public static void main(String[] args) &#123;</div><div class="line">		new TestBytecode().b = 1;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>此段代码反汇编成字节码:<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">corner@corner:~/workspace/test/target/classes$ javap -c -l com/corner/base/jvm/bytecode/TestBytecode.class </div><div class="line">Compiled from &quot;TestBytecode.java&quot;</div><div class="line">public class com.corner.base.jvm.bytecode.TestBytecode &#123;</div><div class="line">  public com.corner.base.jvm.bytecode.TestBytecode();</div><div class="line">    Code:</div><div class="line">       0: aload_0</div><div class="line">       1: invokespecial #24                 // Method java/lang/Object.&quot;&lt;init&gt;&quot;:()V</div><div class="line">       4: aload_0</div><div class="line">       5: ldc           #26                 // String aa</div><div class="line">       7: putfield      #28                 // Field a:Ljava/lang/String;</div><div class="line">      10: aload_0</div><div class="line">      11: iconst_1</div><div class="line">      12: putfield      #30                 // Field e:S</div><div class="line">      15: aload_0</div><div class="line">      16: iconst_1</div><div class="line">      17: putfield      #32                 // Field f:C</div><div class="line">      20: aload_0</div><div class="line">      21: iconst_1</div><div class="line">      22: putfield      #34                 // Field h:B</div><div class="line">      25: aload_0</div><div class="line">      26: iconst_1</div><div class="line">      27: putfield      #36                 // Field k:B</div><div class="line">      30: aload_0</div><div class="line">      31: lconst_1</div><div class="line">      32: putfield      #38                 // Field c:J</div><div class="line">      35: aload_0</div><div class="line">      36: dconst_1</div><div class="line">      37: putfield      #40                 // Field d:D</div><div class="line">      40: aload_0</div><div class="line">      41: iconst_0</div><div class="line">      42: putfield      #42                 // Field b:I</div><div class="line">      45: aload_0</div><div class="line">      46: iconst_0</div><div class="line">      47: putfield      #44                 // Field j:I</div><div class="line">      50: return</div><div class="line">    LineNumberTable:</div><div class="line">      line 3: 0</div><div class="line">      line 7: 4</div><div class="line">      line 8: 10</div><div class="line">      line 9: 15</div><div class="line">      line 10: 20</div><div class="line">      line 11: 25</div><div class="line">      line 12: 30</div><div class="line">      line 13: 35</div><div class="line">      line 14: 40</div><div class="line">      line 15: 45</div><div class="line">      line 3: 50</div><div class="line">    LocalVariableTable:</div><div class="line">      Start  Length  Slot  Name   Signature</div><div class="line">          0      51     0  this   Lcom/corner/base/jvm/bytecode/TestBytecode;</div><div class="line"></div><div class="line">  public static void main(java.lang.String[]);</div><div class="line">    Code:</div><div class="line">       0: new           #1                  // class com/corner/base/jvm/bytecode/TestBytecode</div><div class="line">       3: dup</div><div class="line">       4: invokespecial #52                 // Method &quot;&lt;init&gt;&quot;:()V</div><div class="line">       7: iconst_1</div><div class="line">       8: putfield      #42                 // Field b:I</div><div class="line">      11: return</div><div class="line">    LineNumberTable:</div><div class="line">      line 19: 0</div><div class="line">      line 20: 11</div><div class="line">    LocalVariableTable:</div><div class="line">      Start  Length  Slot  Name   Signature</div><div class="line">          0      12     0  args   [Ljava/lang/String;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>从第一个字节码new开始,我们一步步的看执行过程.</p>
+<h3 id="new"><a href="#new" class="headerlink" title="new"></a>new</h3><p>new字节码的含义是在Java堆中开辟一个空间存放我们建立的对象,一个Java对象在内存中的布局我们后面讨论,在这里详细描述一个对象在Java线程运行过程中分配的大致策略.此处不涉及具体Java堆的分配策略.<br>首先,JVM首先检测指定的类是否已经加载,如果没有加载,必须有加载器进行加载,链接,初始化工作,如果已经加载,虚拟机将进行下一步.<br>其次,JVM支持一个叫TLAB(thread-local object allocation,后面叫TLAB)的概念,支持 TLAB的垃圾回收器会为每一个线程创建一个叫TLAB的内存区域,这样已经初始化的类就会直接在此局域进程分配,如果分配失败,JVM会继续在eden中分配<br>最后,如果以上还是分配失败了,JVM可能会重建TLAB然后重新分配或者在Java堆中分配.<br>那么,JVM怎么确定一个对象在内存中的大小呢?</p>
+<p>我们先看看一个Java对象在内存中的布局<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line"> --------------</div><div class="line">| mark         |</div><div class="line"> --------------</div><div class="line">|metadata      |</div><div class="line"> --------------</div><div class="line">|instance 1    |</div><div class="line"> --------------</div><div class="line"> --------------</div><div class="line">|instance ...  |</div><div class="line"> --------------</div><div class="line"> --------------</div><div class="line">|instance N    |</div><div class="line"> --------------</div><div class="line"> --------------</div><div class="line">|padding       |</div><div class="line"> --------------</div><div class="line">``` </div><div class="line">JVM为了效率考虑会安排不同的内存布局,虚拟机提供了3中内存布局策略,不同的布局主要是对象引用所处的位置,虚拟机使用FieldsAllocationStyle参数进程控制.在这里同样需要考虑压缩指针的使用.为了合理使用内存,JVM提供一种压缩指针的技术,让对象引用由64bit的机器上更改伪32bit.可以极大节约内存的使用.</div><div class="line"></div><div class="line">对象的第一部分是元数据包含的运行时信息和指向klass的指针信息.开启压缩指针总共占用12个字节.</div><div class="line">mark表示的是一个对象指针,在运行时候虚拟机会直接对这个内存区域解释.</div></pre></td></tr></table></figure></p>
+<p>//  64 bits:<br>//  ——–<br>//  unused:25 hash:31 –&gt;| unused:1   age:4    biased_lock:1 lock:2 (normal object)<br>//  JavaThread<em>:54 epoch:2 unused:1   age:4    biased_lock:1 lock:2 (biased object)<br>//  PromotedObject</em>:61 ———————&gt;| promo_bits:3 —–&gt;| (CMS promoted object)<br>//  size:64 —————————————————–&gt;| (CMS free block)<br>//<br>//  unused:25 hash:31 –&gt;| cms_free:1 age:4    biased_lock:1 lock:2 (COOPs &amp;&amp; normal object)<br>//  JavaThread*:54 epoch:2 cms_free:1 age:4    biased_lock:1 lock:2 (COOPs &amp;&amp; biased object)<br>//  narrowOop:32 unused:24 cms_free:1 unused:4 promo_bits:3 —–&gt;| (COOPs &amp;&amp; CMS promoted object)<br>//  unused:21 size:35 –&gt;| cms_free:1 unused:7 ——————&gt;| (COOPs &amp;&amp; CMS free block)<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">下面重点看一下各种不同的内存布局.</div><div class="line">第一种.对象引用放在对前面,后面是基本类型.</div></pre></td></tr></table></figure></p>
+<p>////Fields order: oops, longs/doubles, ints, shorts/chars, bytes, padded fields</p>
+<hr>
+<h2 id="oop-1"><a href="#oop-1" class="headerlink" title="|   oop 1       |"></a>|   oop 1       |</h2><h2 id="oop-…"><a href="#oop-…" class="headerlink" title="|   oop …     |"></a>|   oop …     |</h2><h2 id="oop-n"><a href="#oop-n" class="headerlink" title="|   oop n       |"></a>|   oop n       |</h2><h2 id="basic-type"><a href="#basic-type" class="headerlink" title="|   basic type  |"></a>|   basic type  |</h2><h2 id="padding"><a href="#padding" class="headerlink" title="|   padding     |"></a>|   padding     |</h2><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">首先,内存中排列的是对象引用,由于使用了压缩指针,每一个需要占用4个字节空间,long和double占用8个字节,int占用4个字节,short和char占用2个字节,byte占用1个字节.</div><div class="line">第二种.对象引用在最后,前面是基本类型</div></pre></td></tr></table></figure>
+<h2 id="Fields-order-longs-doubles-ints-shorts-chars-bytes-oops-padded-fields"><a href="#Fields-order-longs-doubles-ints-shorts-chars-bytes-oops-padded-fields" class="headerlink" title="// Fields order: longs/doubles, ints, shorts/chars, bytes, oops, padded fields"></a>// Fields order: longs/doubles, ints, shorts/chars, bytes, oops, padded fields</h2><h2 id="oop-1-1"><a href="#oop-1-1" class="headerlink" title="|   oop 1       |"></a>|   oop 1       |</h2><h2 id="oop-…-1"><a href="#oop-…-1" class="headerlink" title="|   oop …     |"></a>|   oop …     |</h2><h2 id="oop-n-1"><a href="#oop-n-1" class="headerlink" title="|   oop n       |"></a>|   oop n       |</h2><h2 id="basic-type-1"><a href="#basic-type-1" class="headerlink" title="|   basic type  |"></a>|   basic type  |</h2><h2 id="padding-1"><a href="#padding-1" class="headerlink" title="|   padding     |"></a>|   padding     |</h2><p>com.corner.base.jvm.bytecode.TestBytecode: field layout<br>  @ 12 — instance fields start —<br>  @ 44 “a” Ljava.lang.String;<br>  @ 36 “e” S<br>  @ 38 “f” C<br>  @ 40 “h” B<br>  @ 41 “k” B<br>  @ 16 “c” J<br>  @ 24 “d” D<br>  @ 12 “b” I<br>  @ 32 “j” I<br>  @ 48 — instance fields end —<br>  @ 48 — instance ends —<br>  @104 — static fields start —<br>  @104 — static fields end —<br><figure class="highlight plain"><table><tr><td class="code"><pre><div class="line">首先,如果按照我们所说的,基本类型按照longs/doubles, ints, shorts/chars, bytes排列内存布局很明显不对,这是因为JVM为了充分利用内存,8个字节的long和double会做内存对齐,这样如果先存储long和double会留4个字节的空洞,JVM会安排其他的域填充到这个序列中,这里选择了占用4个字节b成员,后面才是按照布局二产生的内存布局.另外为了保证对齐,虚拟机会在每个对象做内存对齐.作为填充.从这个例子中,我们可以知道这个对象在内存中大小为48字节.8字节对齐.</div><div class="line"></div><div class="line">内存布局最基本的是以上两种情况,还有一种就不说了.下面,JVM会对对象区和头部区做归零动作.做完所有的步骤,基本完成了一个对象的内存分配过程.</div><div class="line"></div><div class="line">我们稍微总结一下,内存分配主要考虑管理组织和实际使用的空间,尽量将使用率最大化,压缩管理所使用的空间,尽量将分配的对象保持内存对齐,让其对高速缓存是友好的代码,这些知识在我们编写Java程序已经被系统程序员隐藏了,了解了这些可以让我们更加了解系统的运行过程,写出更加符合JVM的程序.一个对象分配的时候静态区不包含在对象中,所有成员的位置都是Klass确定的.高级程序员对资源的使用是很抠门的.</div><div class="line"></div><div class="line">至此,一个new指令已经完成,返回的指针保存在rax寄存器中,这个寄存器指向了刚刚分配的内存对象.将此指针压入操作数栈中.</div><div class="line"></div><div class="line">### dup ###</div><div class="line">dup指令赋值当前操作数栈的值,并且压入操作数栈,操作效果如下:</div></pre></td></tr></table></figure></p>
+<p>value -&gt;</p>
+<p>value,value -&gt;<br>```</p>
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      <a href="/2017/03/07/jvm/jvm_object_init_call/" class="archive-article-date">
+  	<time datetime="2017-03-07T08:00:31.341Z" itemprop="datePublished"><i class="icon-clock"></i>2017-03-07</time>
+</a>
+      
+      
+
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+  
+<nav id="article-nav">
+  
+    <a href="/2017/03/09/jvm/thread_dump_note/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          (no title)
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/03/06/jvm/jvm_memory_order/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title"></div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+
+
+<div class="share_jia">
+	<!-- JiaThis Button BEGIN -->
+	<div class="jiathis_style">
+		<span class="jiathis_txt">Share to: &nbsp; </span>
+		<a class="jiathis_button_facebook"></a> 
+	    <a class="jiathis_button_twitter"></a>
+	    <a class="jiathis_button_plus"></a> 
+	    <a class="jiathis_button_tsina"></a>
+		<a class="jiathis_button_cqq"></a>
+		<a class="jiathis_button_douban"></a>
+		<a class="jiathis_button_weixin"></a>
+		<a class="jiathis_button_tumblr"></a>
+    <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jtico jtico_jiathis" target="_blank"></a>
+	</div>
+	<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js?uid=1405949716054953" charset="utf-8"></script>
+	<!-- JiaThis Button END -->
+</div>
+
+
+
+
+
+
+<div class="duoshuo">
+	<!-- 多说评论框 start -->
+	<div class="ds-thread" data-thread-key="jvm/jvm_object_init_call" data-title="" data-url="http://yoursite.com/2017/03/07/jvm/jvm_object_init_call/"></div>
+	<!-- 多说评论框 end -->
+	<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+	<script type="text/javascript">
+	var duoshuoQuery = {short_name:"true"};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+	<!-- 多说公共JS代码 end -->
+</div>
+
+
+
+
+
+      </div>
+      <footer id="footer">
+  <div class="outer">
+    <div id="footer-info">
+    	<div class="footer-left">
+    		&copy; 2017 Corner XX
+    	</div>
+      	<div class="footer-right">
+      		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
+      	</div>
+    </div>
+  </div>
+</footer>
+    </div>
+    <script>
+	var yiliaConfig = {
+		fancybox: true,
+		mathjax: true,
+		animate: true,
+		isHome: false,
+		isPost: true,
+		isArchive: false,
+		isTag: false,
+		isCategory: false,
+		open_in_new: false,
+		root: "/"
+	}
+</script>
+
+<script src="/./main.js"></script>
+
+
+
+
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+        processEscapes: true,
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+});
+
+MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';                 
+    }       
+});
+</script>
+
+<script src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+    
+<div class="tools-col">
+  <ul class="btn-wrap">
+    
+      <li class="chose" data-hook="tools-section-all"><span class="text">全部</span><i class="icon-book"></i></li>
+    
+    
+      <li data-hook="tools-section-tag"><span class="text">标签</span><i class="icon-price-tags"></i></li>
+    
+    
+    
+      <li data-hook="tools-section-me"><span class="text">我</span><i class="icon-smile"></i></li>
+    
+  </ul>
+  <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all chose">
+    	</section>
+    
+
+    
+    	<section class="tools-section tools-section-tag">
+    			<div class="widget tagcloud" id="js-tagcloud">
+    				<a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Hadoop-Eagle-Storm/" style="font-size: 10px;">Hadoop Eagle Storm</a> <a href="/tags/Hadoop-Hdfs/" style="font-size: 10px;">Hadoop Hdfs</a> <a href="/tags/Hadoop-Yran/" style="font-size: 10px;">Hadoop Yran</a> <a href="/tags/Hbase/" style="font-size: 16.67px;">Hbase</a> <a href="/tags/Hdfs/" style="font-size: 13.33px;">Hdfs</a> <a href="/tags/JVM/" style="font-size: 20px;">JVM</a> <a href="/tags/Kernel/" style="font-size: 13.33px;">Kernel</a> <a href="/tags/OpenJDK/" style="font-size: 13.33px;">OpenJDK</a> <a href="/tags/Phoenix/" style="font-size: 10px;">Phoenix</a> <a href="/tags/algorithm/" style="font-size: 16.67px;">algorithm</a> <a href="/tags/streamset/" style="font-size: 10px;">streamset</a>
+    			</div>
+    	</section>
+    
+
+    
+
+    
+    	<section class="tools-section tools-section-me">
+  	  	
+  	  		<div class="aboutme-wrap" id="js-aboutme">记录点点滴滴</div>
+  	  	
+    	</section>
+    
+  </div>
+  
+</div>
+    <!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+
+            <div class="pswp__top-bar">
+
+                <!--  Controls are self-explanatory. Order can be changed. -->
+
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+  </div>
+</body>
+</html>
